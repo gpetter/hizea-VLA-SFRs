@@ -5,7 +5,7 @@ from sympy import *
 # Calculate a luminosity, star formation rate, and uncertainties given a flux density
 # Using equation relating synchrotron emission to star formation rate given in Murphy et. al (2011)
 # Also using Condon & Matthews (2018) to calculate luminosity distance
-def calc_params(flux, flux_error, redshift, redshift_error):
+def calcparams(flux, flux_error, redshift, redshift_error):
     # Defining symbols (sympy)
     # redshift
     z = Symbol('z')
