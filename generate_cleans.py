@@ -24,7 +24,7 @@ cutouthasrun = False
 
 # parameters
 ############################################################################
-cleansigma = 2
+cleansigma = 3
 imgsize = 12000
 cutoutsize = 200
 cutframe = [imgsize/2-cutoutsize/2, imgsize/2+cutoutsize/2]
@@ -47,11 +47,11 @@ def makedirtyimages():
             pathstofiles.append(os.path.realpath(f.name))
 
             # write out dirty tclean command
-            #f.write("""tclean(vis=%s, imagename='%s', field='0', datacolumn='data',
-                #verbose=True, gridder='wproject', wprojplanes=128, pblimit=-1, robust=0.5, imsize=[%s], cell='0.2arcsec',
-                #specmode='mfs', deconvolver='mtmfs', nterms=2, scales=[0,11,28], interactive=False, niter=50,
-                #weighting='briggs', usemask='auto-multithresh', stokes='I', threshold='0.0Jy', calcpsf=True,
-                #calcres=True, savemodel='modelcolumn', restart=False) \n \n""" % (vises[x], names[x], imgsize))
+            f.write("""tclean(vis=%s, imagename='%s', field='0', datacolumn='data',
+                verbose=True, gridder='wproject', wprojplanes=128, pblimit=-1, robust=0.5, imsize=[%s], cell='0.2arcsec',
+                specmode='mfs', deconvolver='mtmfs', nterms=2, scales=[0,11,28], interactive=False, niter=50,
+                weighting='briggs', usemask='auto-multithresh', stokes='I', threshold='0.0Jy', calcpsf=True,
+                calcres=True, savemodel='modelcolumn', restart=False) \n \n""" % (vises[x], names[x], imgsize))
 
             # will call imstat to measure the MAD of each image, scaled by number*1.4826*MAD
             # saves threshold value to text file for CleanImages() script's access
@@ -187,15 +187,6 @@ def statistics():
 # can make dirty images, then later clean
 # or can run both one after another
 makedirtyimages()
-
-cleanimages()
-
-pbcor()
-
-cutout()
-
-statistics()
-
 
 # generates the pipeline script
 os.chdir('/users/gpetter/DATA')

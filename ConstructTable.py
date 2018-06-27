@@ -1,32 +1,18 @@
-import astropy
 import os
 import numpy as np
-import pandas as pd
-from random import randint
-import matplotlib.pyplot as plt
-from photutils import CircularAperture
-from photutils import EllipticalAperture
-from photutils import EllipticalAnnulus
-from photutils import CircularAnnulus
-from photutils import aperture_photometry
-from astropy.io import fits
 from astropy.table import Table
-from astropy.coordinates import SkyCoord  # High-level coordinates
-from photutils import SkyCircularAperture
-from astropy.coordinates import ICRS, Galactic, FK4, FK5  # Low-level frames
-from astropy.coordinates import Angle, Latitude, Longitude  # Angles
-from astropy import wcs
-import astropy.units as u
 import CalcSFRs
+CalcSFRs = reload(CalcSFRs)
 import MeasureFluxes
-
+MeasureFluxes = reload(MeasureFluxes)
 
 t = Table.read('VLAsample.csv')
 a = np.empty(len(t))
 a[:] = np.nan
 b = np.zeros(len(t))
-t['data'], t['Flux'], t['Flux_error'], t['test'], t['Luminosity'], t['Luminosity_error'], t['SFR'], t['SFR_error'], \
-t['detect_aper'], t['detect_pix'], t['rms'], t['Npixperbeam'], t['Nbeams'], t['MaxValue'] = b, a, a, a, a, a, a, a, a, a, a, a, a, a
+t['data'], t['Flux'], t['Flux_error'], t['test_error'], t['Luminosity'], t['Luminosity_error'], t['SFR'], t['SFR_error'], \
+t['detect_aper'], t['detect_pix'], t['rms'], t['Npixperbeam'], t['Nbeams'], t['MaxValue'], t['Max/noise'], \
+t['Flux/error'] = b, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a
 
 # Defining units of each column
 t['RA (J2000)'].unit = 'deg'
@@ -53,13 +39,13 @@ for name in names:
     idx = np.where(t['Name'] == name)[0]
     t['data'][idx] = True
 
-    """tmp = str(t['RA (J2000)'][idx][0])
-    ra = float(tmp[:-2])
-    print(ra)
-    tmp2 = str(t['Dec (J2000)'][idx][0])
-    dec = float(tmp2[:-2])
-    c = SkyCoord(ra, dec, frame='icrs', unit='deg')
-    print(c)"""
+    #tmp = str(t['RA (J2000)'][idx][0])
+    #ra = float(tmp[:-2])
+    #print(ra)
+    #tmp2 = str(t['Dec (J2000)'][idx][0])
+    #dec = float(tmp2[:-2])
+    #c = SkyCoord(ra, dec, frame='icrs', unit='deg')
+    #print(c)
 
     flux_measured = MeasureFluxes.photometry(name)
 
@@ -67,9 +53,11 @@ for name in names:
     t['Flux_error'][idx] = flux_measured[1]
     t['rms'][idx] = flux_measured[2]
     t['Npixperbeam'][idx] = flux_measured[3]
-    t['test'][idx] = float(flux_measured[4])
+    t['test_error'][idx] = float(flux_measured[4])
     t['Nbeams'][idx] = flux_measured[5]
     t['MaxValue'][idx] = flux_measured[6]
+    t['Max/noise'][idx] = flux_measured[7]
+    t['Flux/error'][idx] = flux_measured[8]
 
     if flux_measured[0] > 3*flux_measured[2]:
         t['detect_aper'][idx] = True
@@ -85,8 +73,10 @@ for name in names:
     t['SFR'][idx] = params_measured[2]
     t['SFR_error'][idx] = params_measured[3]
 
-print(t)
+
+t_data = t[np.where(t['data'])[0]]
+print(t_data)
 
 
 os.chdir('/users/gpetter/PycharmProjects/untitled')
-t.write('table.csv', format='csv', overwrite=True)
+t_data.write('table.csv', format='csv', overwrite=True)

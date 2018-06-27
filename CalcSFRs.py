@@ -52,7 +52,7 @@ def calcparams(flux, flux_error, redshift, redshift_error):
     Hubble = 70
     Hubble_unc = 2
     freqs = 1.51976491105  # GHz
-    freqsigs = 0.01
+    freqsigs = 0
     alphas = -0.7
     alphasig = 0.05
 
