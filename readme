@@ -4,7 +4,7 @@ The project is broken up into five major components.
 
 1. Generate scripts which will image the raw VLA data, as well as perform other CASA commands on said images : generate_cleans.py
 
-Raw interferometric data comes in the form of visibilites, which must be Fourier transformed and "cleaned" to yield a useful image. Here, the "tclean" algorithm in CASA (Common Astronomy Software Applications) is used to perform these tasks. Because there are upwards of 20 target galaxies, and because CASA commands cannot be imported into python, the best solution was to write a python code which would generate an imagining script for every galaxy's directory based on what is within it. 
+Raw interferometric data comes in the form of visibilites, which must be Fourier transformed and "cleaned" to yield an useful image. Here, the "tclean" algorithm in CASA (Common Astronomy Software Applications) is used to perform these tasks. Because there are upwards of 20 target galaxies, and because CASA commands cannot be imported into python, the best solution was to write a python code which would generate an imagining script for every galaxy's directory based on what is within it. 
 
 Thus, "generate_cleans" goes to every galaxy's directory and writes a simple script which can be run in CASA, which will construct an image and clean it, as well as perform other CASA commands. It also generates an executable which will tell each of the many scripts how to run. Then, by simply running the executable, all 20+ images can be constructed and cleaned simultaneously. 
 
