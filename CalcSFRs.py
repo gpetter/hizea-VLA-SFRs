@@ -1,12 +1,22 @@
+#
+# Author: Grayson Petter
+# Date: 6/28/18
+# Description: Given a flux density in Jy and a redshift of a galaxy observed at a frequency nu, this code will
+# return a luminosity, star formation rate, and uncertainties.
+# This code uses equations given in Murphy et. al (2011), and Condon & Matthews (2018).
+#
+
 import numpy as np
 from sympy import *
 
 
 # Calculate a luminosity, star formation rate, and uncertainties given a flux density
 # Using equation relating synchrotron emission to star formation rate given in Murphy et. al (2011)
-# Also using Condon & Matthews (2018) to calculate luminosity distance
+# Also using Condon & Matthews (2018) to calculate spectral luminosity distance
 def calcparams(flux, flux_error, redshift, redshift_error):
+
     # Defining symbols (sympy)
+
     # redshift
     z = Symbol('z')
     # redshift uncertainty
@@ -67,6 +77,7 @@ def calcparams(flux, flux_error, redshift, redshift_error):
     output.append(SFRuncertainty.subs({nu: freqs, al: alphas, f: flux, z: redshift,
                 zunc: redshift_error, nuunc: freqsigs, alunc: alphasig, f_unc: flux_error, Ho: Hubble,
                 Ho_unc: Hubble_unc}))
-    return(output)
+
+    return output
 
 

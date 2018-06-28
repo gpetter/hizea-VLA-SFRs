@@ -10,9 +10,9 @@ t = Table.read('VLAsample.csv')
 a = np.empty(len(t))
 a[:] = np.nan
 b = np.zeros(len(t))
-t['data'], t['Flux'], t['Flux_error'], t['test_error'], t['Luminosity'], t['Luminosity_error'], t['SFR'], t['SFR_error'], \
+t['data'], t['Flux'], t['Flux_error'], t['Luminosity'], t['Luminosity_error'], t['SFR'], t['SFR_error'], \
 t['detect_aper'], t['detect_pix'], t['rms'], t['Npixperbeam'], t['Nbeams'], t['MaxValue'], t['Max/noise'], \
-t['Flux/error'] = b, a, a, a, a, a, a, a, a, a, a, a, a, a, a, a
+t['Flux/error'] = b, a, a, a, a, a, a, a, a, a, a, a, a, a, a
 
 # Defining units of each column
 t['RA (J2000)'].unit = 'deg'
@@ -53,13 +53,12 @@ for name in names:
     t['Flux_error'][idx] = flux_measured[1]
     t['rms'][idx] = flux_measured[2]
     t['Npixperbeam'][idx] = flux_measured[3]
-    t['test_error'][idx] = float(flux_measured[4])
-    t['Nbeams'][idx] = flux_measured[5]
-    t['MaxValue'][idx] = flux_measured[6]
-    t['Max/noise'][idx] = flux_measured[7]
-    t['Flux/error'][idx] = flux_measured[8]
+    t['Nbeams'][idx] = flux_measured[4]
+    t['MaxValue'][idx] = flux_measured[5]
+    t['Max/noise'][idx] = flux_measured[6]
+    t['Flux/error'][idx] = flux_measured[7]
 
-    if flux_measured[0] > 3*flux_measured[2]:
+    if flux_measured[0] > 3*flux_measured[1]:
         t['detect_aper'][idx] = True
     else: t['detect_aper'][idx] = False
 
@@ -75,8 +74,15 @@ for name in names:
 
 
 t_data = t[np.where(t['data'])[0]]
+#print(t_data)
+
+t_detect = t_data[np.where(np.multiply(t_data['detect_pix'], t_data['detect_aper']))[0]]
+
 print(t_data)
 
 
+
+
 os.chdir('/users/gpetter/PycharmProjects/untitled')
+t_detect.write('detected_table.csv', format='csv', overwrite=True)
 t_data.write('table.csv', format='csv', overwrite=True)
