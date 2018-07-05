@@ -22,6 +22,8 @@ from astropy.coordinates import ICRS, Galactic, FK4, FK5  # Low-level frames
 from astropy.coordinates import Angle, Latitude, Longitude  # Angles
 from astropy import wcs
 import astropy.units as u
+import CalcSFRs
+reload(CalcSFRs)
 
 
 #############################################################################
@@ -30,6 +32,7 @@ cell_size = 0.2  # arcsec/pixel
 aperture_size = 3  # arcsec (radius)
 bkgd_subtract = False
 make_growth_curves = False
+source_find = True
 #############################################################################
 
 
@@ -108,7 +111,7 @@ def photometry(gal_name):
     # If you don't know proper aperture size, let the function find the optimal one, create aperture object
     if make_growth_curves:
         aper_radius = find_aperture_size(positions, data)
-    apertures = CircularAperture(positions, r=aper_radius)
+    apertures = CircularAperture(positions, r=5)
 
     # make mask image where pixels outside aperture are zero, then find the maximum value in the aperture
     mask = apertures.to_mask(method='center')[0].to_image((201, 201))
@@ -118,6 +121,12 @@ def photometry(gal_name):
     # get coordinates of maximum point
     y_max = np.where(data == max_val_in_aperture)[0][0]
     x_max = np.where(data == max_val_in_aperture)[1][0]
+    #print(x_max, y_max)
+    #print(x_max, y_max)
+
+    if source_find:
+        positions = [(x_max, y_max)]
+    apertures = CircularAperture(positions, r=aper_radius)
 
     # Do background subtraction with an annulus if desired
     if bkgd_subtract:
@@ -140,14 +149,17 @@ def photometry(gal_name):
     # return all relevant values
     output = []
 
-    output.append((photo_table['aperture_sum']/pix_per_beam)[0])
+    flux = (photo_table['aperture_sum']/pix_per_beam)[0]
+
+
+    output.append(flux)
     output.append(flux_error)
     output.append(std_dev)
     output.append(pix_per_beam)
     output.append(beams_per_aper)
     output.append(max_val_in_aperture)
     output.append(max_val_in_aperture/std_dev)
-    output.append(((photo_table['aperture_sum']/pix_per_beam)[0])/flux_error)
+    output.append(flux/flux_error)
 
     os.chdir('..')
     return output

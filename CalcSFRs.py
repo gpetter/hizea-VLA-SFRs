@@ -13,7 +13,7 @@ from sympy import *
 # Calculate a luminosity, star formation rate, and uncertainties given a flux density
 # Using equation relating synchrotron emission to star formation rate given in Murphy et. al (2011)
 # Also using Condon & Matthews (2018) to calculate spectral luminosity distance
-def calcparams(flux, flux_error, redshift, redshift_error):
+def calc_params(flux, flux_error, redshift, redshift_error):
 
     # Defining symbols (sympy)
 
@@ -38,7 +38,6 @@ def calcparams(flux, flux_error, redshift, redshift_error):
     c = 299792.458  # km/s
     Dho = c/Ho
 
-
     # Define symbolic formluas for desired quantities
     # convenience definition from Murphy et al. paper
     a = 1/(1+z)
@@ -53,10 +52,12 @@ def calcparams(flux, flux_error, redshift, redshift_error):
     # SFR formula in solar masses/yr (Murphy et. al)
     SFRform = (6.64e-29*(nu**(-al))*Lumform)
     # luminosity uncertainty formula - simple error propagation
-    Lum_unc = ((diff(Lumform, z)*zunc)**2+(diff(Lumform, f)*f_unc)**2+(diff(Lumform, Ho)*Ho_unc)**2)**0.5
+    Lum_stat_unc = ((diff(Lumform, f)*f_unc)**2)**0.5
+
+    Lum_syst_unc = ((diff(Lumform, z)*zunc)**2+(diff(Lumform, Ho)*Ho_unc)**2)**0.5
     # SFR uncertainty formula
-    SFRuncertainty = ((diff(SFRform, z)*zunc)**2+(diff(SFRform, nu)*nuunc)**2+
-                      (diff(SFRform, al)*alunc)**2+(diff(SFRform, f)*f_unc)**2+(diff(SFRform, Ho)*Ho_unc)**2)**.5
+    SFR_stat_uncertainty = ((diff(SFRform, f)*f_unc)**2)**.5
+    SFR_syst_uncertainty = ((diff(SFRform, z) * zunc) ** 2 + (diff(SFRform, Ho) * Ho_unc)**2) ** .5
 
     # Define constants
     Hubble = 70
@@ -68,15 +69,21 @@ def calcparams(flux, flux_error, redshift, redshift_error):
 
     output = []
 
-    # substitute values in from arguments to calculate
-    output.append(Lumform.subs({f: flux, z: redshift, al: alphas, Ho: Hubble}))
-    output.append(Lum_unc.subs({f: flux, z: redshift, f_unc: flux_error, zunc: redshift_error, al: alphasig,
-                                Ho: Hubble, Ho_unc: Hubble_unc}))
-    output.append(SFRform.subs({nu: freqs, al: alphas, f: flux, z: redshift, Ho: Hubble}))
+    SFuncertain = SFR_stat_uncertainty.subs({nu: freqs, al: alphas, f: flux, z: redshift,
+                                            f_unc: flux_error, Ho: Hubble})
+    SF = SFRform.subs({nu: freqs, al: alphas, f: flux, z: redshift, Ho: Hubble})
 
-    output.append(SFRuncertainty.subs({nu: freqs, al: alphas, f: flux, z: redshift,
-                zunc: redshift_error, nuunc: freqsigs, alunc: alphasig, f_unc: flux_error, Ho: Hubble,
-                Ho_unc: Hubble_unc}))
+    Lum = Lumform.subs({f: flux, z: redshift, al: alphas, Ho: Hubble})
+    Lum_uncertain = Lum_stat_unc.subs({f: flux, z: redshift, f_unc: flux_error, zunc: redshift_error, al: alphasig,
+                                Ho: Hubble, Ho_unc: Hubble_unc})
+
+
+    # substitute values in from arguments to calculate
+    output.append(Lum)
+    output.append(Lum_uncertain)
+    output.append(SF)
+
+    output.append(SFuncertain)
 
     return output
 

@@ -21,6 +21,7 @@ dirty_has_run = False
 clean_has_run = False
 pb_has_run = False
 cutout_has_run = False
+stats_has_run = False
 
 
 ############################################################################
@@ -54,9 +55,9 @@ def make_dirty_images():
             f.write("""tclean(vis=%s, imagename='%s', field='0', datacolumn='data',
                 verbose=True, gridder='wproject', wprojplanes=128, pblimit=-1, robust=0.5, imsize=[%s], 
                 cell='0.2arcsec', specmode='mfs', deconvolver='mtmfs', nterms=2, scales=[0,11,28], 
-                interactive=False, niter=50,
+                interactive=False, niter=0,
                 weighting='briggs', usemask='auto-multithresh', stokes='I', threshold='0.0Jy', calcpsf=True,
-                calcres=True, savemodel='modelcolumn', restart=False) \n \n""" % (vises[x], names[x], img_size))
+                calcres=True, savemodel='modelcolumn', restart=True) \n \n""" % (vises[x], names[x], img_size))
 
             # will call imstat to measure the MAD of each image, scaled by number*1.4826*MAD
             # saves threshold value to text file for CleanImages() script's access
@@ -195,12 +196,33 @@ def statistics():
         os.chdir('..')
 
 
+def imfit():
+
+    global stats_has_run
+
+    if stats_has_run:
+        edit_mode = 'a'
+    else:
+        edit_mode = 'w'
+
+    for x in range(len(names)):
+        os.chdir(names[x])
+
+        with open('run_tclean_%s.py' % (names[x].split('.')[0]), edit_mode) as f:
+            if not cutout_has_run:
+                paths_to_dirs.append(os.getcwd())
+                paths_to_files.append(os.path.realpath(f.name))
+
+            f.write("""imfit(imagename='%s.cutout.pbcor', box='75,75,125,125', 
+            residual='test_residual', model='test_model', dooff=False, rms=-1, summary='summary.log')""" % (names[x]))
+
+        os.chdir('..')
+
+
+
 # can make dirty images, then later clean
 # or can run both one after another
-clean_images()
-pb_cor()
-cutout()
-statistics()
+make_dirty_images()
 
 # generates the pipeline script
 os.chdir('/users/gpetter/DATA')
