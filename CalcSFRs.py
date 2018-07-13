@@ -57,7 +57,7 @@ def calc_params(flux, flux_error, redshift, redshift_error):
     Lum_syst_unc = ((diff(Lumform, z)*zunc)**2+(diff(Lumform, Ho)*Ho_unc)**2)**0.5
     # SFR uncertainty formula
     SFR_stat_uncertainty = ((diff(SFRform, f)*f_unc)**2)**.5
-    SFR_syst_uncertainty = ((diff(SFRform, z) * zunc) ** 2 + (diff(SFRform, Ho) * Ho_unc)**2) ** .5
+    SFR_syst_uncertainty = ((diff(SFRform, z) * zunc) ** 2 + (diff(SFRform, Ho) * Ho_unc)**2 + (diff(SFRform, al) * alunc)**2) ** .5
 
     # Define constants
     Hubble = 70
@@ -69,21 +69,27 @@ def calc_params(flux, flux_error, redshift, redshift_error):
 
     output = []
 
-    SFuncertain = SFR_stat_uncertainty.subs({nu: freqs, al: alphas, f: flux, z: redshift,
-                                            f_unc: flux_error, Ho: Hubble})
     SF = SFRform.subs({nu: freqs, al: alphas, f: flux, z: redshift, Ho: Hubble})
 
+    SF_stat = SFR_stat_uncertainty.subs({nu: freqs, al: alphas, f: flux, z: redshift,
+                                            f_unc: flux_error, Ho: Hubble})
+    SF_syst = SFR_syst_uncertainty.subs({nu: freqs, al: alphas, f: flux, z: redshift, zunc: redshift_error,
+                                         alunc: alphasig, f_unc: flux_error, Ho: Hubble, Ho_unc: Hubble_unc})
+
+
+
     Lum = Lumform.subs({f: flux, z: redshift, al: alphas, Ho: Hubble})
-    Lum_uncertain = Lum_stat_unc.subs({f: flux, z: redshift, f_unc: flux_error, zunc: redshift_error, al: alphasig,
-                                Ho: Hubble, Ho_unc: Hubble_unc})
+    Lum_stat = Lum_stat_unc.subs({f: flux, z: redshift, f_unc: flux_error, Ho: Hubble, al: alphas})
+    Lum_syst = Lum_syst_unc.subs({f: flux, z: redshift, f_unc: flux_error, zunc: redshift_error,
+                                  Ho: Hubble, Ho_unc: Hubble_unc})
 
 
     # substitute values in from arguments to calculate
     output.append(Lum)
-    output.append(Lum_uncertain)
+    output.append(Lum_stat)
     output.append(SF)
-
-    output.append(SFuncertain)
+    output.append(SF_stat)
+    #output.append(SF_syst)
 
     return output
 

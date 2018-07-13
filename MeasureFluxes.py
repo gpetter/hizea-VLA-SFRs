@@ -29,10 +29,10 @@ reload(CalcSFRs)
 #############################################################################
 # parameters
 cell_size = 0.2  # arcsec/pixel
-aperture_size = 3  # arcsec (radius)
+aperture_size = 4  # arcsec (radius)
 bkgd_subtract = False
 make_growth_curves = False
-source_find = True
+source_find = False
 #############################################################################
 
 
@@ -105,6 +105,8 @@ def photometry(gal_name):
     # flux error calculation
     flux_error = np.sqrt(beams_per_aper)*std_dev/2
 
+
+
     # center of image
     positions = [(100, 100)]
 
@@ -118,13 +120,16 @@ def photometry(gal_name):
     masked_data = np.multiply(data, mask)
     max_val_in_aperture = max(map(max, masked_data))
 
-    # get coordinates of maximum point
-    y_max = np.where(data == max_val_in_aperture)[0][0]
-    x_max = np.where(data == max_val_in_aperture)[1][0]
-    #print(x_max, y_max)
-    #print(x_max, y_max)
+
 
     if source_find:
+
+        # get coordinates of maximum point
+        y_max = np.where(data == max_val_in_aperture)[0][0]
+        x_max = np.where(data == max_val_in_aperture)[1][0]
+        # print(x_max, y_max)
+        # print(x_max, y_max)
+
         positions = [(x_max, y_max)]
     apertures = CircularAperture(positions, r=aper_radius)
 
@@ -139,17 +144,18 @@ def photometry(gal_name):
     # Do the photometry, background subtraction if desired
     photo_table = aperture_photometry(data, apers, error=error_image)
 
+
+
+    # return all relevant values
+    output = []
     if bkgd_subtract:
         bkg_mean = photo_table['aperture_sum_1'] / annuli.area()
         bkg_sum = bkg_mean * apertures.area()
         final_sum = photo_table['aperture_sum_0'] - bkg_sum
         photo_table['residual_aperture_sum'] = final_sum
-        print(photo_table['residual_aperture_sum'])
-
-    # return all relevant values
-    output = []
-
-    flux = (photo_table['aperture_sum']/pix_per_beam)[0]
+        flux = (photo_table['residual_aperture_sum']/pix_per_beam)[0]
+    else:
+        flux = (photo_table['aperture_sum']/pix_per_beam)[0]
 
 
     output.append(flux)

@@ -33,6 +33,27 @@ cut_frame = [img_size/2-cutout_size/2, img_size/2+cutout_size/2]
 ############################################################################
 
 
+def readjust_size(name):
+    if name == 'J134136.79' or name == 'J090842.76' or name == 'J010624.25'\
+            or name == 'J090133.42' or name == 'J121955.77' or name == 'J123215.82' \
+            or name == 'J211625.14' or name == 'J211824.06':
+        bigger = 14000
+        return [bigger, [bigger/2-cutout_size/2, bigger/2+cutout_size/2]]
+    elif name == 'J112518.89' or name == 'J214000.49':
+        bigger = 15000
+        return [bigger, [bigger / 2 - cutout_size / 2, bigger / 2 + cutout_size / 2]]
+    else:
+        return [img_size, cut_frame]
+
+
+def readjust_threshold(name):
+    if name == 'J122949.83' or name == 'J090133.42' or name == 'J094417.84' or name == 'J112518.89'\
+            or name == 'J211824.06' or name == 'J214000.49' or name == 'J134136.79':
+        return 5.0
+    else:
+        return 3.0
+
+
 # Creates a python script in each galaxy's directory
 # This script will construct a dirty image, or a very lightly cleaned image (niter~=100)
 # Measures the MAD of that image, scales it by 1.4826, and multiplies it by some number to set the threshold
@@ -57,7 +78,8 @@ def make_dirty_images():
                 cell='0.2arcsec', specmode='mfs', deconvolver='mtmfs', nterms=2, scales=[0,11,28], 
                 interactive=False, niter=0,
                 weighting='briggs', usemask='auto-multithresh', stokes='I', threshold='0.0Jy', calcpsf=True,
-                calcres=True, savemodel='modelcolumn', restart=True) \n \n""" % (vises[x], names[x], img_size))
+                calcres=True, savemodel='modelcolumn', restart=True) \n \n""" % (vises[x], names[x],
+                                                                                 readjust_size(names[x])[0]))
 
             # will call imstat to measure the MAD of each image, scaled by number*1.4826*MAD
             # saves threshold value to text file for CleanImages() script's access
@@ -101,8 +123,9 @@ def clean_images():
             f.write(("""tclean(vis=%s, imagename='%s', field='0', datacolumn='data',
                    verbose=True, gridder='wproject', wprojplanes=128, pblimit=-1, robust=0.5, imsize=[%s], 
                    cell='0.2arcsec', specmode='mfs', deconvolver='mtmfs', nterms=2, scales=[0,11,28], """
-                    % (vises[x], names[x], img_size)) + """ interactive=False, niter=20000, weighting='briggs',
-                   usemask='auto-multithresh', sidelobethreshold = 4.0, stokes='I', threshold='%sJy' %(threshold), 
+                    % (vises[x], names[x], readjust_size(names[x])[0])) + """ interactive=False, niter=20000, weighting='briggs',
+                   usemask='auto-multithresh', sidelobethreshold = %s,""" % readjust_threshold(names[x]) +
+                    """ stokes='I', threshold='%sJy' %(threshold), 
                    savemodel='modelcolumn', calcres=False, calcpsf=False, restart=True) \n \n""")
 
         os.chdir('..')
@@ -146,12 +169,16 @@ def cutout():
                 paths_to_files.append(os.path.realpath(f.name))
 
             # make cutout image
+            frame = readjust_size(names[x])[1]
+            lower_bound, upper_bound = frame[0], frame[1]
+
+
             f.write("""imsubimage(imagename='%s.pbcor.image.tt0', outfile='%s.cutout.pbcor', overwrite=True,
-                    region='box[[%spix, %spix], [%spix, %spix]]')\n \n""" % (names[x], names[x], cut_frame[0],
-                                                                             cut_frame[0], cut_frame[1], cut_frame[1]))
+                    region='box[[%spix, %spix], [%spix, %spix]]')\n \n""" % (names[x], names[x], lower_bound,
+                                                                             lower_bound, upper_bound, upper_bound))
             f.write("""imsubimage(imagename='%s.image.tt0', outfile='%s.cutout', overwrite=True,
-                    region='box[[%spix, %spix], [%spix, %spix]]')\n \n""" % (names[x], names[x], cut_frame[0],
-                                                                             cut_frame[0], cut_frame[1], cut_frame[1]))
+                    region='box[[%spix, %spix], [%spix, %spix]]')\n \n""" % (names[x], names[x], lower_bound,
+                                                                             lower_bound, upper_bound, upper_bound))
 
             f.write("""exportfits(imagename='%s.cutout.pbcor', fitsimage='%s.cutout.pbcor.fits', overwrite=True)\n"""
                     % (names[x], names[x]))
@@ -168,6 +195,7 @@ def cutout():
 
 def statistics():
     global cutout_has_run
+    global stats_has_run
 
     if cutout_has_run:
         edit_mode = 'a'
@@ -181,7 +209,7 @@ def statistics():
                 paths_to_dirs.append(os.getcwd())
                 paths_to_files.append(os.path.realpath(f.name))
 
-            f.write("""stats=imstat('%s.residual.tt0')\n""" % (names[x]))
+            f.write("""stats=imstat('%s.image.tt0')\n""" % (names[x]))
             f.write("""stdev=1.4826*stats['medabsdevmed'][0]\n""")
             f.write("""with open('stdev.txt', 'w') as f:\n""")
             f.write("""\tf.write('%s' %(stdev))\n \n""")
@@ -194,6 +222,7 @@ def statistics():
             f.write("""\tf.write('%s' %(beamarea))\n \n""")
 
         os.chdir('..')
+    stats_has_run = True
 
 
 def imfit():
@@ -223,6 +252,11 @@ def imfit():
 # can make dirty images, then later clean
 # or can run both one after another
 make_dirty_images()
+clean_images()
+pb_cor()
+cutout()
+statistics()
+imfit()
 
 # generates the pipeline script
 os.chdir('/users/gpetter/DATA')
