@@ -4,9 +4,14 @@ from astropy.table import Table
 import numpy as np
 from scipy.optimize import curve_fit
 
+use_imfit = True
+
 t = Table.read('table.csv')
-t_detect = t[np.where(np.multiply(t['detect_pix'], t['detect_aper']))[0]]
-correlation = np.multiply(t['detect_pix'], t['detect_aper'])
+t_detect = Table.read('detected_table.csv')
+if use_imfit:
+    correlation = t['detect']
+else:
+    correlation = np.multiply(t['detect_pix'], t['detect_aper'])
 t_nondetect = t[np.where(correlation == 0)[0]]
 t_ok = t_detect[np.where(t_detect['21 cm SFR'] < 1000)[0]]
 t_bad = t_detect[np.where(t_detect['21 cm SFR'] > 1000)[0]]
@@ -33,13 +38,13 @@ def linear_fit(x_vals, y_vals, x_err, y_err):
         return a + b * x
 
     # Fit while holding y intercept to zero, use y errors as weights
-    tmp_popt_cons, _ = curve_fit(func, x_vals, y_vals, bounds=([0, -np.inf], [1e-10, np.inf]), sigma=y_vals)
+    tmp_popt_cons, _ = curve_fit(func, x_vals, y_vals, bounds=([0, -10], [1e-10, 10]), sigma=y_err)
 
     # Use fitted function to calculate the total error as a result of x and y errors
     new_err_tot = np.sqrt((y_err) ** 2 + (tmp_popt_cons[1] * x_err) ** 2)
 
     # Use the total error to fit the data again
-    popt_cons, _ = curve_fit(func, x_vals, y_vals, bounds=([0, -np.inf], [1e-10, np.inf]), sigma=new_err_tot)
+    popt_cons, _ = curve_fit(func, x_vals, y_vals, bounds=([0, -10], [1e-10, 10]), sigma=new_err_tot)
 
     held_to_zero = np.poly1d([popt_cons[1], 0])
     print(held_to_zero)
@@ -77,16 +82,16 @@ def plot_all_SFRs():
     one_to_one = np.poly1d([1, 0])
     fits = linear_fit(irsfrok, radiosfr_ok, irok_uncertainty, sfr_ok_uncertainty)
 
-    plt.figure(1, figsize=(15, 12), dpi=200)
+    plt.figure(1, figsize=(15, 12), dpi=300)
     hax = plt.subplot(111)
     ok = plt.errorbar(irsfrok, radiosfr_ok, yerr=sfr_ok_uncertainty, xerr=irok_uncertainty, fmt='o', ecolor='k', c='b', capsize=2)
 
     plt.yscale('log')
     plt.xscale('log')
 
-    fit_line = plt.plot(np.linspace(0, 600), fits[0](np.linspace(0, 600)), 'g')
-    one_to_one_line = plt.plot(np.linspace(0, 600), one_to_one(np.linspace(0, 600)), 'k--')
-    fixed_line = plt.plot(np.linspace(0, 600), fits[1](np.linspace(0, 600)), 'gold')
+    fit_line = plt.plot(np.linspace(0, 700), fits[0](np.linspace(0, 700)), 'g')
+    one_to_one_line = plt.plot(np.linspace(0, 700), one_to_one(np.linspace(0, 700)), 'k--')
+    fixed_line = plt.plot(np.linspace(0, 700), fits[1](np.linspace(0, 700)), 'c')
 
     flagged = plt.errorbar(flagIRSFR, flagRadioSFR, yerr=flag_SFR_uncertainty, xerr=flagIR_uncertainty, fmt='o', ecolor='k', c='r', capsize=2, marker='x')
 
@@ -96,7 +101,7 @@ def plot_all_SFRs():
 
     #hax2 = plt.subplot(122)
 
-    non_detect = plt.errorbar(ir_non_detect, radio_non, yerr=10**.1, xerr=ir_non_unc, fmt='o',
+    non_detect = plt.errorbar(ir_non_detect, radio_non, yerr=2*radio_non/10, xerr=ir_non_unc, fmt='o',
                               ecolor='k', c='gold', capsize=2, uplims=True, marker='v')
 
     #hax.set_position([0, 0, 1, 1])
@@ -105,7 +110,10 @@ def plot_all_SFRs():
     #hax2.set_axis_off()
 
     plt.legend((ok, flagged, non_detect, fit_line[0], one_to_one_line[0], fixed_line[0]),
-               ('Detections', 'Possible AGN', 'Non-Detections', 'Weighted fit', 'One to one', 'Y-int fixed 0'))
+               ('Detections', 'AGN', 'Non-Detection Upper Limits', 'Weighted Linear Fit', 'One to one', 'Weighted Fit Fixed'))
+
+    plt.annotate('%s' % fits[0], (45, 180))
+    plt.annotate('%s' % fits[1], (50, 80))
 
     if label_points:
         for x in range(len(irsfrok)):
@@ -187,13 +195,13 @@ def plot_good_SFRs():
     one_to_one = np.poly1d([1, 0])
     fits = linear_fit(irsfr, radiosfr, ir_uncertainty, sfr_uncertainty)
 
-    plt.figure(3)
+    plt.figure(3, dpi=150)
     plt.clf()
     plt.errorbar(irsfr, radiosfr, yerr=sfr_uncertainty, xerr=ir_uncertainty, fmt='o', ecolor='k', capsize=2, c='b')
 
     fit_line = plt.plot(np.linspace(0, 600), fits[0](np.linspace(0, 600)), 'g')
     one_to_one_line = plt.plot(np.linspace(0,600), one_to_one(np.linspace(0, 600)), 'k--')
-    fixed_line = plt.plot(np.linspace(0, 600), fits[1](np.linspace(0, 600)), 'gold')
+    fixed_line = plt.plot(np.linspace(0, 600), fits[1](np.linspace(0, 600)), 'c')
 
     plt.legend((fit_line[0], one_to_one_line[0], fixed_line[0]), ('Weighted fit', 'One to one', 'Y-int fixed to 0'))
 
@@ -233,18 +241,18 @@ def plot_lum_vs_z():
     z_uncertainty_non = z_non * .05
     names_non = t_nondetect['Name']
 
-    plt.figure(4, figsize=(15, 12), dpi=200)
+    plt.figure(4, figsize=(15, 12), dpi=300)
     ok = plt.errorbar(z_ok, lum_ok, yerr=lum_uncertainty_ok, xerr=z_uncertainty_ok,
                       fmt='o', ecolor='k', capsize=2, c='b')
     bad = plt.errorbar(z_bad, lum_bad, yerr=lum_uncertainty_bad, xerr=z_uncertainty_bad,
                        fmt='o', ecolor='k', capsize=2, c='r', marker='x')
-    non = plt.errorbar(z_non, lum_non, yerr=10**28*np.log10(lum_non), xerr=z_uncertainty_non,
+    non = plt.errorbar(z_non, lum_non, yerr=lum_non/5, xerr=z_uncertainty_non,
                        fmt='o', ecolor='k', capsize=2, c='gold', uplims=True, marker='v')
 
-    plt.legend((ok, bad, non), ('Detections', 'Possible AGN', 'Non-detections'))
+    plt.legend((ok, bad, non), ('Detections', 'Possible AGN', 'Non-Detection Upper Limits'))
 
     plt.yscale('log')
-    plt.xlabel('Redshift')
+    plt.xlabel('z')
     plt.ylabel('Luminosity (erg/s)')
     plt.title('Luminosity vs. Redshift')
     if label_points:
@@ -309,8 +317,7 @@ def plot_relative():
     radio_non_unc = np.array(t_nondetect['21 cm SFR Error (stat.)'])/np.array(t_nondetect['IR SFR'])
     non_names = t_nondetect['Name']
 
-
-    plt.figure(6, figsize=(15, 12), dpi=200)
+    plt.figure(6, figsize=(15, 12), dpi=300)
     # plt.scatter(irsfr, radiosfr, c='r')
     ok = plt.errorbar(irsfrok, y_ok, yerr=y_ok_uncertainty, xerr=irok_uncertainty, fmt='o', ecolor='k', c='b',
                       capsize=2)
@@ -318,14 +325,14 @@ def plot_relative():
     plt.xscale('log')
     flagged = plt.errorbar(flagIRSFR, flag_y, yerr=flag_y_uncertainty, xerr=flagIR_uncertainty, fmt='o',
                            ecolor='k', c='r', capsize=2, marker='x')
-    non_detect = plt.errorbar(ir_non_detect, radio_non, yerr=np.abs(np.log10(radio_non)), xerr=ir_non_unc, fmt='o', ecolor='k',
+    non_detect = plt.errorbar(ir_non_detect, radio_non, yerr=radio_non/5, xerr=ir_non_unc, fmt='o', ecolor='k',
                               c='gold', capsize=2, uplims=True, marker='v')
     bar = plt.axhspan(0.5, 2.0, color='g', alpha=0.1)
 
     plt.xlabel('IR SFR $(M_{\odot} yr^{-1})$')
     plt.ylabel('21cm SFR / IR SFR')
     plt.title('Relative Star Formation Comparison (All Sources)')
-    plt.legend((ok, flagged, non_detect, bar), ('Detections', 'Possible AGN', 'Non-Detections', '0.5<y<2'))
+    plt.legend((ok, flagged, non_detect, bar), ('Detections', 'AGN', 'Non-Detection Upper Limits', 'Factor of 2 Tolerance'))
 
     for x in range(len(irsfrok)):
         plt.annotate(names[x].split('.')[0], (irsfrok[x], y_ok[x]), xytext=(0, 2), textcoords='offset points',

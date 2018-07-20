@@ -18,8 +18,11 @@ reload(SigFigs)
 import ReturnImfitPars
 reload(ReturnImfitPars)
 
+#######################################################################
+# parameters
 sig_fig_toggle = True
 get_imfits = True
+#######################################################################
 
 
 # Read in data table given to me by collaboration
@@ -30,13 +33,16 @@ a = np.empty(len(t))
 a[:] = np.nan
 b = np.zeros(len(t))
 t['data'], t['21 cm Flux'], t['21 cm Flux Error'], t['Luminosity'], t['Luminosity Error (stat.)'], \
-t['21 cm SFR'], t['21 cm SFR Error (stat.)'], t['detect_aper'], t['detect_pix'], t['RMS'], \
-t['Npixperbeam'], t['Nbeams'], t['MaxValue'], t['Max/noise'], \
-t['Flux/error'] = b, a, a, a, a, a, a, a, a, a, a, a, a, a, a
+t['21 cm SFR'], t['21 cm SFR Error (stat.)'],  t['RMS'], \
+t['Npixperbeam'], t['Nbeams'], t['MaxValue aper'],  = b, a, a, a, a, a, a, a, a, a, a
 
 # Optional toggle to retrieve data from imfit logs
 if get_imfits:
-    t['imfit flux'], t['imfit flux_err'], t['imfit max'], t['imfit max_err'], t['ratio'] = a, a, a, a, a
+    t['imfit max'], t['imfit max_err'], t['aper flux err/imfit err'], t['geo_mean/rms'], t['detect'] = a, a, a, a, a
+    t['imfit max'].unit = 'Jy/beam'
+    t['imfit max_err'].unit = 'Jy/beam'
+else:
+    t['detect_aper'], t['detect_pix'], t['Max/noise aper'], t['Flux/error aper'] = a, a, a, a
 
 # Defining units of each column
 t['RA (J2000)'].unit = 'deg'
@@ -49,7 +55,7 @@ t['Luminosity Error (stat.)'].unit = 'erg/s'
 t['21 cm SFR'].unit = 'solMass/yr'
 t['21 cm SFR Error (stat.)'].unit = 'solMass/yr'
 t['RMS'].unit = 'Jy/beam'
-t['MaxValue'].unit = 'Jy/beam'
+t['MaxValue aper'].unit = 'Jy/beam'
 
 # Go to directory, get list of galaxies
 os.chdir('/users/gpetter/DATA')
@@ -67,39 +73,98 @@ for name in names:
     # Call photometry script, returning flux and error, as well as other parameters
     flux_measured = MeasureFluxes.photometry(name)
 
-    # Set elements in table equal to results from photometry. Apply sig figs if desired
+    Flux = 0
+    Flux_error = 0
+
     if sig_fig_toggle:
-        sig_fig_fluxes = SigFigs.sig_figs(False, 2, flux_measured[0], flux_measured[1])
-        t['21 cm Flux'][idx] = sig_fig_fluxes[0]
-        t['21 cm Flux Error'][idx] = sig_fig_fluxes[1]
         t['RMS'][idx] = '%f' % float(('%.' + '%sg' % 2) % float(flux_measured[2]))
     else:
-        t['21 cm Flux'][idx] = flux_measured[0]
-        t['21 cm Flux Error'][idx] = flux_measured[1]
         t['RMS'][idx] = flux_measured[2]
+
+    # Retrieve parameters derived by imfit to compare to our estimates
+    if get_imfits:
+        try:
+            imfitpars = ReturnImfitPars.get_imfit(name)
+            Flux = float(imfitpars[0])
+            Flux_error = float(imfitpars[1])
+            if sig_fig_toggle:
+                sig_im_flux = SigFigs.sig_figs(False, 2, Flux, Flux_error)
+                t['21 cm Flux'][idx] = sig_im_flux[0]
+                t['21 cm Flux Error'][idx] = sig_im_flux[1]
+            else:
+                t['21 cm Flux'][idx] = Flux
+                t['21 cm Flux Error'][idx] = Flux_error
+            t['imfit max'][idx] = imfitpars[2]
+            t['imfit max_err'][idx] = imfitpars[3]
+            t['aper flux err/imfit err'][idx] = float(flux_measured[1]) / float(imfitpars[1])
+            t['geo_mean/rms'][idx] = np.sqrt(Flux * float(imfitpars[2])) / float(t['RMS'][idx])
+            if t['geo_mean/rms'][idx] > 2.5:
+                t['detect'][idx] = True
+            else:
+                t['detect'][idx] = False
+        except:
+            os.chdir('..')
+    else:
+        # Set elements in table equal to results from photometry. Apply sig figs if desired
+        Flux = flux_measured[0]
+        Flux_error = flux_measured[1]
+        if sig_fig_toggle:
+            sig_fig_fluxes = SigFigs.sig_figs(False, 2, Flux, Flux_error)
+            t['21 cm Flux'][idx] = sig_fig_fluxes[0]
+            t['21 cm Flux Error'][idx] = sig_fig_fluxes[1]
+
+        else:
+            t['21 cm Flux'][idx] = Flux
+            t['21 cm Flux Error'][idx] = Flux_error
+
+
 
     t['Npixperbeam'][idx] = flux_measured[3]
     t['Nbeams'][idx] = flux_measured[4]
-    t['MaxValue'][idx] = flux_measured[5]
-    t['Max/noise'][idx] = flux_measured[6]
-    t['Flux/error'][idx] = flux_measured[7]
+    t['MaxValue aper'][idx] = flux_measured[5]
 
-    # If flux is a 3 sigma result, count as detection
-    if flux_measured[0] > 3*flux_measured[1]:
-        t['detect_aper'][idx] = True
-    else: t['detect_aper'][idx] = False
 
-    # If maximum pixel value is a 3 sigma result, count as detection
-    if flux_measured[6] > 3:
-        t['detect_pix'][idx] = True
-    else: t['detect_pix'][idx] = False
+    with open((name + '/max.txt'), 'w') as f_max:
+        f_max.write('%s' % float(flux_measured[5]))
+
+
+
+    if not get_imfits:
+
+        t['Max/noise aper'][idx] = flux_measured[6]
+        t['Flux/error aper'][idx] = flux_measured[7]
+
+        # If flux is a 3 sigma result, count as detection
+        if flux_measured[0] > 3*flux_measured[1]:
+            t['detect_aper'][idx] = True
+        else: t['detect_aper'][idx] = False
+
+        # If maximum pixel value is a 3 sigma result, count as detection
+        if flux_measured[6] > 3:
+            t['detect_pix'][idx] = True
+        else: t['detect_pix'][idx] = False
+        detection = t['detect_aper'][idx] and t['detect_pix'][idx]
+    else:
+        detection = t['detect'][idx]
+
+
 
     # If both previous detection criteria are met, the galaxy is deemed a detection, calculate a SFR and Luminosity
-    if t['detect_aper'][idx] and t['detect_pix'][idx]:
-        params_measured = CalcSFRs.calc_params(flux_measured[0], flux_measured[1], t['Z'][idx], 0.001)
+    if detection:
+        params_measured = CalcSFRs.calc_params(Flux, Flux_error, t['Z'][idx], 0.001)
+        os.chdir(name)
+        with open('detect.txt', 'w') as f:
+            f.write('%s' % 1)
+        os.chdir('..')
+
     # If galaxy is not detected, calculate a SFR and luminosity with 3x the flux error to give an upper limit
     else:
-        params_measured = CalcSFRs.calc_params(3*flux_measured[1], flux_measured[1], t['Z'][idx], 0.001)
+        params_measured = CalcSFRs.calc_params(3*Flux_error, Flux_error, t['Z'][idx], 0.001)
+        os.chdir(name)
+        with open('detect.txt', 'w') as f:
+            f.write('%s' % 0)
+        os.chdir('..')
+
 
     # Enter calculated SFRs and luminosities to table, with sig figs if desired
     if sig_fig_toggle:
@@ -115,23 +180,16 @@ for name in names:
         t['21 cm SFR'][idx] = params_measured[2]
         t['21 cm SFR Error (stat.)'][idx] = params_measured[3]
 
-    # Retrieve parameters derived by imfit to compare to our estimates
-    if get_imfits:
-        try:
-            imfitpars = ReturnImfitPars.get_imfit(name)
-            t['imfit flux'][idx] = imfitpars[0]
-            t['imfit flux_err'][idx] = imfitpars[1]
-            t['imfit max'][idx] = imfitpars[2]
-            t['imfit max_err'][idx] = imfitpars[3]
-            t['ratio'][idx] = float(imfitpars[1])/float(flux_measured[1])
-        except:
-            os.chdir('..')
+
 
 # Filter table to contain only sources with associated data presently
 t_data = t[np.where(t['data'])[0]]
 
 # Filter table to contain only detections
-t_detect = t_data[np.where(np.multiply(t_data['detect_pix'], t_data['detect_aper']))[0]]
+if get_imfits:
+    t_detect = t_data[np.where(t_data['detect'])[0]]
+else:
+    t_detect = t_data[np.where(np.multiply(t_data['detect_pix'], t_data['detect_aper']))[0]]
 
 print(t_data)
 

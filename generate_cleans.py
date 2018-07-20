@@ -123,7 +123,7 @@ def clean_images():
             f.write(("""tclean(vis=%s, imagename='%s', field='0', datacolumn='data',
                    verbose=True, gridder='wproject', wprojplanes=128, pblimit=-1, robust=0.5, imsize=[%s], 
                    cell='0.2arcsec', specmode='mfs', deconvolver='mtmfs', nterms=2, scales=[0,11,28], """
-                    % (vises[x], names[x], readjust_size(names[x])[0])) + """ interactive=False, niter=20000, weighting='briggs',
+                    % (vises[x], names[x], readjust_size(names[x])[0])) + """ interactive=False, niter=40000, weighting='briggs',
                    usemask='auto-multithresh', sidelobethreshold = %s,""" % readjust_threshold(names[x]) +
                     """ stokes='I', threshold='%sJy' %(threshold), 
                    savemodel='modelcolumn', calcres=False, calcpsf=False, restart=True) \n \n""")
@@ -227,6 +227,8 @@ def statistics():
 
 def imfit():
 
+
+
     global stats_has_run
 
     if stats_has_run:
@@ -251,7 +253,6 @@ def imfit():
 
 # can make dirty images, then later clean
 # or can run both one after another
-make_dirty_images()
 clean_images()
 pb_cor()
 cutout()
