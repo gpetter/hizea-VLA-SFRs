@@ -2,24 +2,12 @@ import aplpy
 import matplotlib.pyplot as plt
 import os
 from astropy.io import fits
+import GetGalaxyList
+reload(GetGalaxyList)
 
-# Go to directory, get list of galaxies
-os.chdir('/users/gpetter/DATA')
-names = os.listdir('data_v1')
-os.chdir('data_v1')
+current_dir = os.getcwd()
 
-# Sort by RA
-stripped_names = []
-sorted_names = []
-
-for name in names:
-    new_name = name.split('J')[1]
-    stripped_names.append(new_name)
-
-sorted_nums = sorted(stripped_names)
-
-for thing in sorted_nums:
-    sorted_names.append('J' + thing)
+sorted_names = GetGalaxyList.return_galaxy_list(1)
 
 # Create figure
 fig = plt.figure(10, figsize=(23, 30), dpi=200)
@@ -58,10 +46,26 @@ for z in range(len(sorted_names)):
     angle = hdu[0].header['bpa']
 
     f = aplpy.FITSFigure(imgname, figure=fig, subplot=[x, y, x_size, y_size])
-    center = f.pixel2world(100, 100)
-    f.show_circles([center[0]], [center[1]], [4.0 / 3600.0], edgecolor='magenta')
+
+    #center = f.pixel2world(100, 100)
+    #f.show_circles([center[0]], [center[1]], [4.0 / 3600.0], edgecolor='magenta')
+    with open('center_HST.txt', 'r') as f_center:
+        lines = f_center.readlines()
+        HST_ra = float(lines[0])
+        HST_dec = float(lines[1])
+    with open('width.txt', 'r') as f_width:
+        lines = f_width.readlines()
+        maj_width = float(lines[0])
+        min_width = float(lines[1])
+        PA = float(lines[2])
+
+    f.show_ellipses(HST_ra, HST_dec, min_width/3600., maj_width/3600., angle=PA, edgecolor='magenta')
+    #f.show_markers(HST_ra, HST_dec, marker='x', facecolor='c')
+
     f.show_colorscale()
+
     f.set_title('%s' % sorted_names[z], weight=weighting)
+
     f.add_beam()
     f.beam.set_major(bmaj)
     f.beam.set_minor(bmin)
@@ -88,7 +92,7 @@ for z in range(len(sorted_names)):
 
     os.chdir('..')
 
-os.chdir('/users/gpetter/PycharmProjects/untitled')
+os.chdir(current_dir)
 plt.savefig('Stamps.png')
 plt.clf()
 plt.close()

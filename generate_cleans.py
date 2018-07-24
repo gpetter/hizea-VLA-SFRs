@@ -1,14 +1,10 @@
 import os
+import GetGalaxyList
+reload(GetGalaxyList)
 
 vises = []
 
-# go to DATA directory
-os.chdir('/users/gpetter/DATA')
-
-# get list of directories within 'data_v1'
-# each directory corresponds to a galaxy
-names = os.listdir('data_v1')
-os.chdir('data_v1')
+names = GetGalaxyList.return_galaxy_list(2)
 
 # for each galaxy, find all .ms files and append to visibilities list
 for name in names:
@@ -86,7 +82,7 @@ def make_dirty_images():
             f.write("""stats=imstat('%s.image.tt0')\n""" %(names[x]))
             f.write("""thresh=%s*1.4826*stats['medabsdevmed'][0]\n""" % clean_sigma)
             f.write("""print(thresh)\n""")
-            f.write("""with open('threshold.txt', 'w') as f:\n""")
+            f.write("""with open('text/threshold.txt', 'w') as f:\n""")
             f.write("""\tf.write('%s' %(thresh))\n \n""")
 
         os.chdir('..')
@@ -113,7 +109,7 @@ def clean_images():
                 paths_to_files.append(os.path.realpath(f.name))
 
             # retrieve previously saved threshold value
-            f.write("""with open('threshold.txt', 'r') as f:\n""")
+            f.write("""with open('text/threshold.txt', 'r') as f:\n""")
             f.write("""\tglobal threshold\n""")
             f.write("""\tlines=f.readlines()\n""")
             f.write("""\tthreshold=float(lines[0])\n""")
@@ -123,7 +119,7 @@ def clean_images():
             f.write(("""tclean(vis=%s, imagename='%s', field='0', datacolumn='data',
                    verbose=True, gridder='wproject', wprojplanes=128, pblimit=-1, robust=0.5, imsize=[%s], 
                    cell='0.2arcsec', specmode='mfs', deconvolver='mtmfs', nterms=2, scales=[0,11,28], """
-                    % (vises[x], names[x], readjust_size(names[x])[0])) + """ interactive=False, niter=40000, weighting='briggs',
+                    % (vises[x], names[x], readjust_size(names[x])[0])) + """ interactive=False, niter=20000, weighting='briggs',
                    usemask='auto-multithresh', sidelobethreshold = %s,""" % readjust_threshold(names[x]) +
                     """ stokes='I', threshold='%sJy' %(threshold), 
                    savemodel='modelcolumn', calcres=False, calcpsf=False, restart=True) \n \n""")
@@ -211,53 +207,23 @@ def statistics():
 
             f.write("""stats=imstat('%s.image.tt0')\n""" % (names[x]))
             f.write("""stdev=1.4826*stats['medabsdevmed'][0]\n""")
-            f.write("""with open('stdev.txt', 'w') as f:\n""")
+            f.write("""with open('text/stdev.txt', 'w') as f:\n""")
             f.write("""\tf.write('%s' %(stdev))\n \n""")
             f.write("""majoraxis = imhead(imagename='%s.image.tt0', mode='get', hdkey='bmaj')['value']\n"""
                     % (names[x]))
             f.write("""minoraxis = imhead(imagename='%s.image.tt0', mode='get', hdkey='bmin')['value']\n \n"""
                     % (names[x]))
             f.write("""beamarea = np.pi*majoraxis*minoraxis/(4*np.log(2))\n""")
-            f.write("""with open('beamarea.txt', 'w') as f:\n""")
+            f.write("""with open('text/beamarea.txt', 'w') as f:\n""")
             f.write("""\tf.write('%s' %(beamarea))\n \n""")
 
         os.chdir('..')
     stats_has_run = True
 
 
-def imfit():
-
-
-
-    global stats_has_run
-
-    if stats_has_run:
-        edit_mode = 'a'
-    else:
-        edit_mode = 'w'
-
-    for x in range(len(names)):
-        os.chdir(names[x])
-
-        with open('run_tclean_%s.py' % (names[x].split('.')[0]), edit_mode) as f:
-            if not cutout_has_run:
-                paths_to_dirs.append(os.getcwd())
-                paths_to_files.append(os.path.realpath(f.name))
-
-            f.write("""imfit(imagename='%s.cutout.pbcor', box='75,75,125,125', 
-            residual='test_residual', model='test_model', dooff=False, rms=-1, summary='summary.log')""" % (names[x]))
-
-        os.chdir('..')
-
-
-
 # can make dirty images, then later clean
 # or can run both one after another
-clean_images()
-pb_cor()
-cutout()
-statistics()
-imfit()
+make_dirty_images()
 
 # generates the pipeline script
 os.chdir('/users/gpetter/DATA')

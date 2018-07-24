@@ -16,26 +16,20 @@ def sig_figs(lum_flag, figs, value, uncertainty):
 
         output.append(round(value, -idx))
 
-
     elif float(uncertainty) > 1.0:
         sig_fig_uncertainty = '%f' % float(('%.' + '%sg' % figs) % float(uncertainty))
         arrayed = map(int, sig_fig_uncertainty.split('.')[0])
 
-        reversedarr = np.array(arrayed[::-1])
+        reversed_arr = np.array(arrayed[::-1])
 
-
-        idx = min(np.where(reversedarr > 0.0)[0])
+        idx = min(np.where(reversed_arr > 0.0)[0])
         output.append(round(float(value), -idx))
     else:
         sig_fig_uncertainty = '%f' % float(('%.' + '%sg' % figs) % float(uncertainty))
         arrayed = np.array(map(float, sig_fig_uncertainty.split('.')[1]))
 
-        #reversedarr = np.array(arrayed[::-1])
-
         idx = min(np.where(arrayed > 0.0)[0]) + figs
         output.append(round(float(value), idx))
-
-
 
     output.append(float(sig_fig_uncertainty))
     return output

@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import matplotlib.colors
+import matplotlib.transforms as tf
 from astropy.table import Table
 import numpy as np
 from scipy.optimize import curve_fit
@@ -17,6 +18,12 @@ t_ok = t_detect[np.where(t_detect['21 cm SFR'] < 1000)[0]]
 t_bad = t_detect[np.where(t_detect['21 cm SFR'] > 1000)[0]]
 
 label_points = True
+
+
+def set_aspect_ratio_log(plot, aspect_ratio):
+    x_min, x_max = plot.get_xlim()
+    y_min, y_max = plot.get_ylim()
+    return plot.set_aspect(aspect_ratio * ((np.log10(x_max / x_min)) / (np.log10(y_max / y_min))))
 
 
 def linear_fit(x_vals, y_vals, x_err, y_err):
@@ -60,6 +67,8 @@ def linear_fit(x_vals, y_vals, x_err, y_err):
 
 def plot_all_SFRs():
 
+    x_axis_lim = 1000
+
     irsfrok = np.array(t_ok['IR SFR']).astype(float)
     irok_uncertainty = 0.2*irsfrok
     radiosfr_ok = np.array(t_ok['21 cm SFR']).astype(float)
@@ -82,49 +91,86 @@ def plot_all_SFRs():
     one_to_one = np.poly1d([1, 0])
     fits = linear_fit(irsfrok, radiosfr_ok, irok_uncertainty, sfr_ok_uncertainty)
 
-    plt.figure(1, figsize=(15, 12), dpi=300)
-    hax = plt.subplot(111)
-    ok = plt.errorbar(irsfrok, radiosfr_ok, yerr=sfr_ok_uncertainty, xerr=irok_uncertainty, fmt='o', ecolor='k', c='b', capsize=2)
 
-    plt.yscale('log')
-    plt.xscale('log')
+    fig, (ax, ax2) = plt.subplots(2, 1, sharex=True, figsize=(8,10), dpi=300, gridspec_kw = {'height_ratios':[1, 4]})
 
-    fit_line = plt.plot(np.linspace(0, 700), fits[0](np.linspace(0, 700)), 'g')
-    one_to_one_line = plt.plot(np.linspace(0, 700), one_to_one(np.linspace(0, 700)), 'k--')
-    fixed_line = plt.plot(np.linspace(0, 700), fits[1](np.linspace(0, 700)), 'c')
-
-    flagged = plt.errorbar(flagIRSFR, flagRadioSFR, yerr=flag_SFR_uncertainty, xerr=flagIR_uncertainty, fmt='o', ecolor='k', c='r', capsize=2, marker='x')
-
-    plt.xlabel('IR SFR $(M_{\odot} yr^{-1})$')
-    plt.ylabel('21cm SFR $(M_{\odot} yr^{-1})$')
-    plt.title('Star Formation Comparison (All Sources)')
-
-    #hax2 = plt.subplot(122)
-
-    non_detect = plt.errorbar(ir_non_detect, radio_non, yerr=2*radio_non/10, xerr=ir_non_unc, fmt='o',
+    ok = ax2.errorbar(irsfrok, radiosfr_ok, yerr=sfr_ok_uncertainty, xerr=irok_uncertainty, fmt='o', ecolor='k', c='b',
+                      capsize=2)
+    flagged = ax.errorbar(flagIRSFR, flagRadioSFR, yerr=flag_SFR_uncertainty, xerr=flagIR_uncertainty, fmt='o',
+                           ecolor='k', c='r', capsize=2, marker='x')
+    non_detect = ax2.errorbar(ir_non_detect, radio_non, yerr=2 * radio_non / 10, xerr=ir_non_unc, fmt='o',
                               ecolor='k', c='gold', capsize=2, uplims=True, marker='v')
 
-    #hax.set_position([0, 0, 1, 1])
-    #hax2.set_position([0, 0, 1, 1])
 
-    #hax2.set_axis_off()
+    fit_line = ax2.plot(np.linspace(0, x_axis_lim), fits[0](np.linspace(0, x_axis_lim)), 'g')
+    one_to_one_line = ax2.plot(np.linspace(0, x_axis_lim), one_to_one(np.linspace(0, x_axis_lim)), 'k--')
+    fixed_line = ax2.plot(np.linspace(0, x_axis_lim), fits[1](np.linspace(0, x_axis_lim)), 'c')
+    ir_lim_line = ax.axvline(x=30, color='orange', ls='dashed')
+    ax2.axvline(x=30, color='orange', ls='dashed')
 
-    plt.legend((ok, flagged, non_detect, fit_line[0], one_to_one_line[0], fixed_line[0]),
-               ('Detections', 'AGN', 'Non-Detection Upper Limits', 'Weighted Linear Fit', 'One to one', 'Weighted Fit Fixed'))
+    plt.suptitle('Star Formation Comparison (All Sources)', y=0.95)
+    fig.text(0.05, 0.5, '21cm SFR $(M_{\odot} yr^{-1})$', va='center', rotation='vertical')
+    plt.xlabel('IR SFR $(M_{\odot} yr^{-1})$')
 
-    plt.annotate('%s' % fits[0], (45, 180))
-    plt.annotate('%s' % fits[1], (50, 80))
+    ax.legend((ok, flagged, non_detect, fit_line[0], one_to_one_line[0], fixed_line[0], ir_lim_line),
+               ('Detections', 'AGN', 'Non-Detection Upper Limits', 'Weighted Linear Fit', 'One to one',
+                'Weighted Fit Fixed', 'IR Limit'), prop={'size': 8})
+
+    #plt.annotate('%s' % fits[0], (45, 180))
+    #plt.annotate('%s' % fits[1], (50, 80))
+
+    ax.set_ylim(flagRadioSFR[0]-5000, flagRadioSFR[0]+5000)
+    ax.set_xscale('log')
+    ax.set_yscale('log')
+    ax2.set_yscale('log')
+    ax2.set_ylim(10, 600)
+
+    ax.set_xlim(10, x_axis_lim)
+    ax2.set_xlim(10, x_axis_lim)
+
+    d = .015  # how big to make the diagonal lines in axes coordinates
+    # arguments to pass to plot, just so we don't keep repeating them
+    kwargs = dict(transform=ax.transAxes, color='k', clip_on=False)
+    ax.plot((-d, +d), (-3.5*d, 3.5*d), **kwargs)  # top-left diagonal
+    ax.plot((1 - d, 1 + d), (-3.5*d, +3.5*d), **kwargs)  # top-right diagonal
+    #plt.gca().set_aspect('equal', adjustable='box')
+
+    kwargs.update(transform=ax2.transAxes)  # switch to the bottom axes
+    ax2.plot((-d, +d), (1 - d, 1 + d), **kwargs)  # bottom-left diagonal
+    ax2.plot((1 - d, 1 + d), (1 - d, 1 + d), **kwargs)  # bottom-right diagonal
+
+    # hide the spines between ax and ax2
+    ax.spines['bottom'].set_visible(False)
+    ax2.spines['top'].set_visible(False)
+    ax.xaxis.tick_top()
+    ax.tick_params(labeltop='off')  # don't put tick labels at the top
+    ax2.xaxis.tick_bottom()
+
+    ax2.set_aspect('equal', adjustable='box')
+
+    bottom_params = np.array(ax2.get_position())
+    x_left = bottom_params[0][0]
+    x_right = bottom_params[1][0]
+
+    top_params = np.array(ax.get_position())
+    y_top = top_params[1][1]
+    y_low = top_params[0][1]
+
+    box = tf.Bbox(np.array([[x_left, y_low], [x_right, y_top]]))
+    print(box)
+
+    ax.set_position(box)
 
     if label_points:
         for x in range(len(irsfrok)):
-            plt.annotate(names[x].split('.')[0], (irsfrok[x], radiosfr_ok[x]), xytext=(0, 2), textcoords='offset points',
+            ax2.annotate(names[x].split('.')[0], (irsfrok[x], radiosfr_ok[x]), xytext=(0, 2), textcoords='offset points',
                          ha='right', va='bottom')
         for x in range(len(flagIRSFR)):
-            plt.annotate(flagnames[x].split('.')[0], (flagIRSFR[x], flagRadioSFR[x]), xytext=(0, 2), textcoords='offset points',
+            ax.annotate(flagnames[x].split('.')[0], (flagIRSFR[x], flagRadioSFR[x]), xytext=(0, 2), textcoords='offset points',
                          ha='right', va='bottom')
 
         for x in range(len(ir_non_detect)):
-            plt.annotate(non_names[x].split('.')[0], (ir_non_detect[x], radio_non[x]), xytext=(0, 2), textcoords='offset points',
+            ax2.annotate(non_names[x].split('.')[0], (ir_non_detect[x], radio_non[x]), xytext=(0, 2), textcoords='offset points',
                          ha='right', va='bottom')
 
     plt.savefig('SFR_all_plot.png', overwrite=True)
@@ -405,10 +451,7 @@ def plot_all_reversed_axes():
 
 
 plot_all_SFRs()
-#plot_SFRs_detections()
-plot_good_SFRs()
-plot_lum_vs_z()
-#plot_flux_vs_z()
-plot_relative()
-#plot_all_reversed_axes()
+#plot_good_SFRs()
+#plot_lum_vs_z()
+#plot_relative()
 

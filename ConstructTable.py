@@ -17,6 +17,8 @@ import SigFigs
 reload(SigFigs)
 import ReturnImfitPars
 reload(ReturnImfitPars)
+import GetGalaxyList
+reload(GetGalaxyList)
 
 #######################################################################
 # parameters
@@ -57,11 +59,7 @@ t['21 cm SFR Error (stat.)'].unit = 'solMass/yr'
 t['RMS'].unit = 'Jy/beam'
 t['MaxValue aper'].unit = 'Jy/beam'
 
-# Go to directory, get list of galaxies
-os.chdir('/users/gpetter/DATA')
-names = os.listdir('data_v1')
-os.chdir('data_v1')
-
+names = GetGalaxyList.return_galaxy_list(1)
 
 # Go to each galaxy, call photometry and calculate SFRs scripts, and add the outputs to the table
 for name in names:

@@ -19,6 +19,11 @@ def get_imfit(gal_name):
     output.append(max_val)
     output.append(max_err)
 
+    with open('width.txt', 'w') as f_new:
+        f_new.write(val_line[16]+'\n')
+        f_new.write(val_line[17]+'\n')
+        f_new.write(val_line[18]+'\n')
+
     os.chdir('..')
 
     return output
