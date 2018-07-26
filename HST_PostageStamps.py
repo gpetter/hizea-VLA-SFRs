@@ -22,20 +22,29 @@ sorted_nums = sorted(stripped_names)
 for thing in sorted_nums:
     sorted_names.append('J' + thing)
 
-# Create figure
-fig = plt.figure(10, figsize=(23, 30), dpi=200)
+num_gals = len(sorted_names)
+if num_gals/5. >= 4.:
+    cols = 5
+else:
+    cols = 4
+rows = 5
 
-x_size = .16
-y_size = .12
-x_start = .072
-y_start = .8133333
+# Create figure
+fig = plt.figure(10, figsize=(cols*6, rows*6), dpi=200)
+
+spacing = 0.35
+
+x_size = (1. - spacing)/cols
+y_size = (1. - spacing)/rows
+x_start = spacing/(cols+1.)
+y_start = 1. - y_size - spacing/(rows+1.)
 x_iter = 0
 y_iter = 0
 
 for z in range(len(sorted_names)):
     os.chdir(sorted_names[z])
 
-    if z % 4 == 0 and z != 0:
+    if z % cols == 0 and z != 0:
         x_iter = 0
         y_iter = y_iter - (1-y_start)
 
@@ -59,7 +68,7 @@ for z in range(len(sorted_names)):
     f = aplpy.FITSFigure(HST_name, figure=fig, subplot=[x, y, x_size, y_size])
 
     f.show_grayscale()
-    f.show_contour(imgname, alpha=.5)
+    f.show_contour(imgname, alpha=.5, linewidths=0.5)
 
     f.set_title('%s' % sorted_names[z], weight=weighting)
 

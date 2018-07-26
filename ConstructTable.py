@@ -35,8 +35,7 @@ a = np.empty(len(t))
 a[:] = np.nan
 b = np.zeros(len(t))
 t['data'], t['21 cm Flux'], t['21 cm Flux Error'], t['Luminosity'], t['Luminosity Error (stat.)'], \
-t['21 cm SFR'], t['21 cm SFR Error (stat.)'],  t['RMS'], \
-t['Npixperbeam'], t['Nbeams'], t['MaxValue aper'],  = b, a, a, a, a, a, a, a, a, a, a
+t['21 cm SFR'], t['21 cm SFR Error (stat.)'],  t['RMS'] = b, a, a, a, a, a, a, a
 
 # Optional toggle to retrieve data from imfit logs
 if get_imfits:
@@ -44,7 +43,9 @@ if get_imfits:
     t['imfit max'].unit = 'Jy/beam'
     t['imfit max_err'].unit = 'Jy/beam'
 else:
-    t['detect_aper'], t['detect_pix'], t['Max/noise aper'], t['Flux/error aper'] = a, a, a, a
+    t['detect_aper'], t['detect_pix'], t['Max/noise aper'], t['Flux/error aper'], \
+    t['Npixperbeam'], t['Nbeams'], t['MaxValue aper'] = a, a, a, a, a, a, a
+    t['MaxValue aper'].unit = 'Jy/beam'
 
 # Defining units of each column
 t['RA (J2000)'].unit = 'deg'
@@ -57,7 +58,7 @@ t['Luminosity Error (stat.)'].unit = 'erg/s'
 t['21 cm SFR'].unit = 'solMass/yr'
 t['21 cm SFR Error (stat.)'].unit = 'solMass/yr'
 t['RMS'].unit = 'Jy/beam'
-t['MaxValue aper'].unit = 'Jy/beam'
+
 
 names = GetGalaxyList.return_galaxy_list(1)
 
@@ -96,16 +97,20 @@ for name in names:
             t['imfit max_err'][idx] = imfitpars[3]
             t['aper flux err/imfit err'][idx] = float(flux_measured[1]) / float(imfitpars[1])
             t['geo_mean/rms'][idx] = np.sqrt(Flux * float(imfitpars[2])) / float(t['RMS'][idx])
-            if t['geo_mean/rms'][idx] > 2.5:
+            if t['geo_mean/rms'][idx] > 3 and t['21 cm Flux'][idx] > 0:
                 t['detect'][idx] = True
             else:
                 t['detect'][idx] = False
         except:
+            print('hi')
             os.chdir('..')
     else:
         # Set elements in table equal to results from photometry. Apply sig figs if desired
         Flux = flux_measured[0]
         Flux_error = flux_measured[1]
+        t['Npixperbeam'][idx] = flux_measured[3]
+        t['Nbeams'][idx] = flux_measured[4]
+        t['MaxValue aper'][idx] = flux_measured[5]
         if sig_fig_toggle:
             sig_fig_fluxes = SigFigs.sig_figs(False, 2, Flux, Flux_error)
             t['21 cm Flux'][idx] = sig_fig_fluxes[0]
@@ -114,12 +119,6 @@ for name in names:
         else:
             t['21 cm Flux'][idx] = Flux
             t['21 cm Flux Error'][idx] = Flux_error
-
-
-
-    t['Npixperbeam'][idx] = flux_measured[3]
-    t['Nbeams'][idx] = flux_measured[4]
-    t['MaxValue aper'][idx] = flux_measured[5]
 
 
     with open((name + '/max.txt'), 'w') as f_max:
@@ -194,3 +193,4 @@ print(t_data)
 os.chdir('/users/gpetter/PycharmProjects/untitled')
 t_detect.write('detected_table.csv', format='csv', overwrite=True)
 t_data.write('table.csv', format='csv', overwrite=True)
+t_data.write('textable', format='aastex', overwrite=True)

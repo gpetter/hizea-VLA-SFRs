@@ -7,7 +7,7 @@ current_dir = os.getcwd()
 ##########################################################################################
 # parameters
 data_path = '/users/gpetter/DATA/data_v1'
-fix_width = False
+fix_width = True
 ##########################################################################################
 
 # Go to directory, get list of galaxies

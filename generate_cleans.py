@@ -61,6 +61,8 @@ def make_dirty_images():
     for x in range(len(names)):
 
         os.chdir(names[x])
+        if not os.path.exists('text'):
+            os.makedirs('text')
 
         with open('run_tclean_%s.py' %(names[x].split('.')[0]), 'w') as f:
 
@@ -223,7 +225,10 @@ def statistics():
 
 # can make dirty images, then later clean
 # or can run both one after another
-make_dirty_images()
+clean_images()
+pb_cor()
+cutout()
+statistics()
 
 # generates the pipeline script
 os.chdir('/users/gpetter/DATA')

@@ -68,6 +68,7 @@ def linear_fit(x_vals, y_vals, x_err, y_err):
 def plot_all_SFRs():
 
     x_axis_lim = 1000
+    y_axis_lim = 600
 
     irsfrok = np.array(t_ok['IR SFR']).astype(float)
     irok_uncertainty = 0.2*irsfrok
@@ -106,7 +107,8 @@ def plot_all_SFRs():
     one_to_one_line = ax2.plot(np.linspace(0, x_axis_lim), one_to_one(np.linspace(0, x_axis_lim)), 'k--')
     fixed_line = ax2.plot(np.linspace(0, x_axis_lim), fits[1](np.linspace(0, x_axis_lim)), 'c')
     ir_lim_line = ax.axvline(x=30, color='orange', ls='dashed')
-    ax2.axvline(x=30, color='orange', ls='dashed')
+    ax2.vlines(x=30, ymin=30, ymax=y_axis_lim, colors='orange', linestyles='dashed')
+    ax2.hlines(y=30, xmin=30, xmax=x_axis_lim, colors='orange', linestyles='dashed')
 
     plt.suptitle('Star Formation Comparison (All Sources)', y=0.95)
     fig.text(0.05, 0.5, '21cm SFR $(M_{\odot} yr^{-1})$', va='center', rotation='vertical')
@@ -114,7 +116,7 @@ def plot_all_SFRs():
 
     ax.legend((ok, flagged, non_detect, fit_line[0], one_to_one_line[0], fixed_line[0], ir_lim_line),
                ('Detections', 'AGN', 'Non-Detection Upper Limits', 'Weighted Linear Fit', 'One to one',
-                'Weighted Fit Fixed', 'IR Limit'), prop={'size': 8})
+                'Weighted Fit Fixed', 'Proposed Detection Limit'), prop={'size': 8})
 
     #plt.annotate('%s' % fits[0], (45, 180))
     #plt.annotate('%s' % fits[1], (50, 80))
@@ -123,7 +125,7 @@ def plot_all_SFRs():
     ax.set_xscale('log')
     ax.set_yscale('log')
     ax2.set_yscale('log')
-    ax2.set_ylim(10, 600)
+    ax2.set_ylim(10, y_axis_lim)
 
     ax.set_xlim(10, x_axis_lim)
     ax2.set_xlim(10, x_axis_lim)
