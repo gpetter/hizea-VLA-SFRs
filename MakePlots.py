@@ -5,27 +5,31 @@ from astropy.table import Table
 import numpy as np
 from scipy.optimize import curve_fit
 
+
+# Keep this true
 use_imfit = True
 
+# Read in astropy table
 t = Table.read('table.csv')
+
+# Read in table of detections only
 t_detect = Table.read('detected_table.csv')
+
 if use_imfit:
     correlation = t['detect']
 else:
     correlation = np.multiply(t['detect_pix'], t['detect_aper'])
+
+# Filter table into 3 separate tables, one for detections, non-detections, and flagged sources (AGN)
 t_nondetect = t[np.where(correlation == 0)[0]]
 t_ok = t_detect[np.where(t_detect['21 cm SFR'] < 1000)[0]]
 t_bad = t_detect[np.where(t_detect['21 cm SFR'] > 1000)[0]]
 
-label_points = True
+# Use plt.annotate to place the names of the galaxies next to points
+label_points = False
 
 
-def set_aspect_ratio_log(plot, aspect_ratio):
-    x_min, x_max = plot.get_xlim()
-    y_min, y_max = plot.get_ylim()
-    return plot.set_aspect(aspect_ratio * ((np.log10(x_max / x_min)) / (np.log10(y_max / y_min))))
-
-
+# Do two weighted linear fits to detections only. Fix the second fit to have a y-intercept of zero
 def linear_fit(x_vals, y_vals, x_err, y_err):
 
     # Do first fit with just y errors
@@ -65,44 +69,57 @@ def linear_fit(x_vals, y_vals, x_err, y_err):
     return [fit_fn, held_to_zero]
 
 
+# Plot radio SFR vs IR SFR
 def plot_all_SFRs():
 
     x_axis_lim = 1000
     y_axis_lim = 600
 
+
+    # Making arrays of SFRs and uncertainties for non-AGN detections
     irsfrok = np.array(t_ok['IR SFR']).astype(float)
-    irok_uncertainty = 0.2*irsfrok
+    irok_uncertainty = 0.2*irsfrok  # Fiducial x error bars
     radiosfr_ok = np.array(t_ok['21 cm SFR']).astype(float)
     sfr_ok_uncertainty = np.array(t_ok['21 cm SFR Error (stat.)']).astype(float)
     names = t_ok['Name']
     labels = np.random.randint(0, 3, size=len(irsfrok))
 
+    # for AGN
     flagIRSFR = np.array(t_bad['IR SFR'])
     flagIR_uncertainty = 0.2*flagIRSFR
     flagRadioSFR = np.array(t_bad['21 cm SFR'])
     flag_SFR_uncertainty = np.array(t_bad['21 cm SFR Error (stat.)'])
     flagnames = t_bad['Name']
 
+    # and for non-detections
     ir_non_detect = np.array(t_nondetect['IR SFR'])
     ir_non_unc = 0.2*ir_non_detect
     radio_non = np.array(t_nondetect['21 cm SFR'])
     radio_non_unc = np.array(t_nondetect['21 cm SFR Error (stat.)'])
     non_names = t_nondetect['Name']
 
+    # Get indices of sources which lie below proposed detection limit
+    detect_x_lims = (irsfrok < 30)
+    non_detect_x_lims = (ir_non_detect < 30)
+
+    # Generate one-to-one line
     one_to_one = np.poly1d([1, 0])
+    # Do the linear fits to non-AGN detections only
     fits = linear_fit(irsfrok, radiosfr_ok, irok_uncertainty, sfr_ok_uncertainty)
 
-
+    # Generate subplots for the broken axis effect, ax2 for majority of data and ax for AGN
     fig, (ax, ax2) = plt.subplots(2, 1, sharex=True, figsize=(8,10), dpi=300, gridspec_kw = {'height_ratios':[1, 4]})
 
-    ok = ax2.errorbar(irsfrok, radiosfr_ok, yerr=sfr_ok_uncertainty, xerr=irok_uncertainty, fmt='o', ecolor='k', c='b',
+    # Plot all data with different markers. For non-detections, make y-axis upper-limit arrows. For sources below
+    # proposed detection limit, make x-axis upper limit arrows.
+    ok = ax2.errorbar(irsfrok, radiosfr_ok, yerr=sfr_ok_uncertainty, xerr=irok_uncertainty, xuplims=detect_x_lims, fmt='o', ecolor='k', c='b',
                       capsize=2)
     flagged = ax.errorbar(flagIRSFR, flagRadioSFR, yerr=flag_SFR_uncertainty, xerr=flagIR_uncertainty, fmt='o',
                            ecolor='k', c='r', capsize=2, marker='x')
-    non_detect = ax2.errorbar(ir_non_detect, radio_non, yerr=2 * radio_non / 10, xerr=ir_non_unc, fmt='o',
+    non_detect = ax2.errorbar(ir_non_detect, radio_non, yerr=2 * radio_non / 10, xerr=ir_non_unc, xuplims=non_detect_x_lims, fmt='o',
                               ecolor='k', c='gold', capsize=2, uplims=True, marker='v')
 
-
+    # Plot the linear fits, the one-to-one line, and the detection limit dashed lines
     fit_line = ax2.plot(np.linspace(0, x_axis_lim), fits[0](np.linspace(0, x_axis_lim)), 'g')
     one_to_one_line = ax2.plot(np.linspace(0, x_axis_lim), one_to_one(np.linspace(0, x_axis_lim)), 'k--')
     fixed_line = ax2.plot(np.linspace(0, x_axis_lim), fits[1](np.linspace(0, x_axis_lim)), 'c')
@@ -110,17 +127,22 @@ def plot_all_SFRs():
     ax2.vlines(x=30, ymin=30, ymax=y_axis_lim, colors='orange', linestyles='dashed')
     ax2.hlines(y=30, xmin=30, xmax=x_axis_lim, colors='orange', linestyles='dashed')
 
+
+    # Titles
     plt.suptitle('Star Formation Comparison (All Sources)', y=0.95)
     fig.text(0.05, 0.5, '21cm SFR $(M_{\odot} yr^{-1})$', va='center', rotation='vertical')
     plt.xlabel('IR SFR $(M_{\odot} yr^{-1})$')
 
+    # Legend
     ax.legend((ok, flagged, non_detect, fit_line[0], one_to_one_line[0], fixed_line[0], ir_lim_line),
                ('Detections', 'AGN', 'Non-Detection Upper Limits', 'Weighted Linear Fit', 'One to one',
                 'Weighted Fit Fixed', 'Proposed Detection Limit'), prop={'size': 8})
 
+    # put equations of linear fits on plot
     #plt.annotate('%s' % fits[0], (45, 180))
     #plt.annotate('%s' % fits[1], (50, 80))
 
+    # Log scales, axis limits
     ax.set_ylim(flagRadioSFR[0]-5000, flagRadioSFR[0]+5000)
     ax.set_xscale('log')
     ax.set_yscale('log')
@@ -130,6 +152,8 @@ def plot_all_SFRs():
     ax.set_xlim(10, x_axis_lim)
     ax2.set_xlim(10, x_axis_lim)
 
+
+    # Hack to make the diagonal hashes on broken axis
     d = .015  # how big to make the diagonal lines in axes coordinates
     # arguments to pass to plot, just so we don't keep repeating them
     kwargs = dict(transform=ax.transAxes, color='k', clip_on=False)
@@ -150,6 +174,8 @@ def plot_all_SFRs():
 
     ax2.set_aspect('equal', adjustable='box')
 
+
+    # Trying to get the 2 subplots to line up
     bottom_params = np.array(ax2.get_position())
     x_left = bottom_params[0][0]
     x_right = bottom_params[1][0]
@@ -180,93 +206,8 @@ def plot_all_SFRs():
     plt.close()
 
 
-def plot_SFRs_detections():
-
-    irsfr = np.array(t_ok['IR SFR'])
-    ir_uncertainty = 0.2*irsfr
-    radiosfr = np.array(t_ok['21 cm SFR'])
-    sfr_uncertainty = np.array(t_ok['21 cm SFR Error (stat.)'])
-    names = t_ok['Name']
-    labels = np.random.randint(0, 3, size=len(irsfr))
-
-    flagIRSFR = np.array(t_bad['IR SFR'])
-    flagIR_uncertainty = 0.2*flagIRSFR
-    flagRadioSFR = np.array(t_bad['21 cm SFR'])
-    flag_SFR_uncertainty = np.array(t_bad['21 cm SFR Error (stat.)'])
-
-    flagnames = t_bad['Name']
-
-    fit = np.polyfit(irsfr, radiosfr, 1)
-    fit_fn = np.poly1d(fit)
-    print(fit_fn)
 
 
-    def get_cmap(n, name='hsv'):
-        '''Returns a function that maps each index in 0, 1, ..., n-1 to a distinct
-        RGB color; the keyword argument name must be a standard mpl colormap name.'''
-        return plt.cm.get_cmap(name, n)
-
-
-    cmap = get_cmap(len(irsfr))
-
-
-    plt.figure(2)
-    #plt.scatter(irsfr, radiosfr, c='r')
-    good = plt.errorbar(irsfr, radiosfr, yerr=sfr_uncertainty, xerr=ir_uncertainty, fmt='o', ecolor='k', c='b', capsize=2)
-    plt.plot(np.linspace(0, 300), fit_fn(np.linspace(0, 300)))
-    plt.yscale('log')
-    bad = plt.errorbar(flagIRSFR, flagRadioSFR, yerr=flag_SFR_uncertainty, xerr=flagIR_uncertainty, fmt='o', ecolor='k', c='r', capsize=2)
-    plt.xlabel('IR SFR $(M_{\odot} yr^{-1})$')
-    plt.ylabel('21cm SFR $(M_{\odot} yr^{-1})$')
-    plt.title('Star Formation Comparison (Detected Sources)')
-    plt.legend((good, bad), ('Detections', 'Possible AGN'))
-    for x in range(len(irsfr)):
-        plt.annotate(names[x].split('.')[0], (irsfr[x], radiosfr[x]), xytext=(0, 2), textcoords='offset points',
-                     ha='right', va='bottom')
-    for x in range(len(flagIRSFR)):
-        plt.annotate(flagnames[x].split('.')[0], (flagIRSFR[x], flagRadioSFR[x]), xytext=(0, 2), textcoords='offset points',
-                     ha='right', va='bottom')
-    plt.savefig('SFR_detections.png', overwrite=True)
-    plt.clf()
-    plt.close()
-
-
-def plot_good_SFRs():
-
-    irsfr = np.array(t_ok['IR SFR']).astype(float)
-    ir_uncertainty = 0.2*irsfr
-    radiosfr = np.array(t_ok['21 cm SFR']).astype(float)
-    sfr_uncertainty = np.array(t_ok['21 cm SFR Error (stat.)']).astype(float)
-    names = t_ok['Name']
-    labels = np.random.randint(0, 3, size=len(irsfr))
-
-    one_to_one = np.poly1d([1, 0])
-    fits = linear_fit(irsfr, radiosfr, ir_uncertainty, sfr_uncertainty)
-
-    plt.figure(3, dpi=150)
-    plt.clf()
-    plt.errorbar(irsfr, radiosfr, yerr=sfr_uncertainty, xerr=ir_uncertainty, fmt='o', ecolor='k', capsize=2, c='b')
-
-    fit_line = plt.plot(np.linspace(0, 600), fits[0](np.linspace(0, 600)), 'g')
-    one_to_one_line = plt.plot(np.linspace(0,600), one_to_one(np.linspace(0, 600)), 'k--')
-    fixed_line = plt.plot(np.linspace(0, 600), fits[1](np.linspace(0, 600)), 'c')
-
-    plt.legend((fit_line[0], one_to_one_line[0], fixed_line[0]), ('Weighted fit', 'One to one', 'Y-int fixed to 0'))
-
-    plt.xlabel('IR SFR $(M_{\odot} yr^{-1})$')
-    plt.ylabel('21cm SFR $(M_{\odot} yr^{-1})$')
-    plt.xlim([0, 600])
-    plt.ylim([0, 600])
-    plt.title('Star Formation Comparison (Unflagged Sources)')
-
-    if label_points:
-        for x in range(len(irsfr)):
-            plt.annotate(names[x].split('.')[0], (irsfr[x], radiosfr[x]), xytext=(45, -15), textcoords='offset points',
-                         ha='right', va='bottom')
-
-    plt.savefig('SFR_unflagged.png', overwrite=True)
-    plt.clf()
-    plt.close()
 
 
 def plot_lum_vs_z():
@@ -319,27 +260,7 @@ def plot_lum_vs_z():
     plt.close()
 
 
-def plot_flux_vs_z():
 
-    f = np.array(t['21 cm Flux'])
-    f_uncertainty = np.array(t['21 cm Flux Error'])
-    z = np.array(t['Z'])
-    z_uncertainty = z*.05
-    names = t['Name']
-
-    plt.figure(5)
-    # plt.scatter(irsfr, radiosfr, c='r')
-    plt.errorbar(z, f, yerr=f_uncertainty, xerr=z_uncertainty, fmt='o', ecolor='k', capsize=2, c='b')
-    plt.yscale('log')
-    plt.xlabel('Redshift')
-    plt.ylabel('Flux (Jy)')
-    plt.title('Flux vs. Redshift')
-    #for x in range(len(irsfr)):
-        #plt.annotate(names[x].split('.')[0], (irsfr[x], radiosfr[x]), xytext=(0, 2), textcoords='offset points',
-                     #ha='right', va='bottom')
-    plt.savefig('flux_vs_z.png', overwrite=True)
-    plt.clf()
-    plt.close()
 
 
 def plot_relative():
@@ -397,59 +318,6 @@ def plot_relative():
     plt.clf()
     plt.close()
 
-
-def plot_all_reversed_axes():
-
-    irsfrok = np.array(t_ok['IR SFR'])
-    irok_uncertainty = 0.2 * irsfrok
-    radiosfr_ok = np.array(t_ok['21 cm SFR'])
-    sfr_ok_uncertainty = np.array(t_ok['21 cm SFR Error (stat.)'])
-    names = t_ok['Name']
-    labels = np.random.randint(0, 3, size=len(irsfrok))
-
-    flagIRSFR = np.array(t_bad['IR SFR'])
-    flagIR_uncertainty = 0.2 * flagIRSFR
-    flagRadioSFR = np.array(t_bad['21 cm SFR'])
-    flag_SFR_uncertainty = np.array(t_bad['21 cm SFR Error (stat.)'])
-    flagnames = t_bad['Name']
-
-    ir_non_detect = np.array(t_nondetect['IR SFR'])
-    ir_non_unc = 0.2 * ir_non_detect
-    radio_non = np.array(t_nondetect['21 cm SFR'])
-    radio_non_unc = np.array(t_nondetect['21 cm SFR Error (stat.)'])
-    non_names = t_nondetect['Name']
-
-    fit = np.polyfit(radiosfr_ok, irsfrok, 1)
-    fit_fn = np.poly1d(fit)
-
-    plt.figure(7)
-    # plt.scatter(irsfr, radiosfr, c='r')
-    ok = plt.errorbar(radiosfr_ok, irsfrok, xerr=sfr_ok_uncertainty, yerr=irok_uncertainty, fmt='o', ecolor='k', c='b',
-                      capsize=2)
-    plt.plot(np.linspace(0, 600), fit_fn(np.linspace(0, 600)))
-    plt.xscale('log')
-    flagged = plt.errorbar(flagRadioSFR, flagIRSFR, xerr=flag_SFR_uncertainty, yerr=flagIR_uncertainty, fmt='o',
-                           ecolor='k', c='r', capsize=2)
-    non_detect = plt.errorbar(radio_non, ir_non_detect, xerr=radio_non_unc, yerr=ir_non_unc, fmt='o', ecolor='k',
-                              c='y', capsize=2)
-    plt.ylabel('IR SFR $(M_{\odot} yr^{-1})$')
-    plt.xlabel('21cm SFR $(M_{\odot} yr^{-1})$')
-    plt.title('Star Formation Comparison (All Sources)')
-    plt.legend((ok, flagged, non_detect), ('Detections', 'Possible AGN', 'Non-Detections'))
-    """for x in range(len(irsfrok)):
-        plt.annotate(names[x].split('.')[0], (irsfrok[x], radiosfr_ok[x]), xytext=(0, 2), textcoords='offset points',
-                     ha='right', va='bottom')
-    for x in range(len(flagIRSFR)):
-        plt.annotate(flagnames[x].split('.')[0], (flagIRSFR[x], flagRadioSFR[x]), xytext=(0, 2), textcoords='offset points',
-                     ha='right', va='bottom')
-
-    for x in range(len(ir_non_detect)):
-        plt.annotate(non_names[x].split('.')[0], (ir_non_detect[x], radio_non[x]), xytext=(0, 2), textcoords='offset points',
-                     ha='right', va='bottom')"""
-
-    plt.savefig('SFR_all_reversed.png', overwrite=True)
-    plt.clf()
-    plt.close()
 
 
 plot_all_SFRs()

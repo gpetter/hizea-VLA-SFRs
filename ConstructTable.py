@@ -22,13 +22,19 @@ reload(GetGalaxyList)
 
 #######################################################################
 # parameters
+# Use sig figs when displaying fluxes, luminosities, and SFRs in the table (calculations are still done with floats)
 sig_fig_toggle = True
+
+# Toggle whether to use aperture photometry or to retrieve imfit results for flux measurements
 get_imfits = True
+
+# Name of data table containing source list with RAs, Decs, IR SFRs, etc. Might need to delete columns by hand prior
+table_name = 'VLAsample.csv'
 #######################################################################
 
 
 # Read in data table given to me by collaboration
-t = Table.read('VLAsample.csv')
+t = Table.read(table_name)
 
 # Append columns to table for new data
 a = np.empty(len(t))
