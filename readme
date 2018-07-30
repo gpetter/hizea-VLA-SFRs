@@ -1,4 +1,4 @@
-These scripts are designed to constitute a pipeline which begins with raw VLA observation data and eventually produces science-ready data, particularly star formation rates of the given target galaxies. The primary goal of this project is to attain star formation rates (SFRs) for each of the target galaxies, which can then be analyzed and compared to SFRs previously attained through infrared and optical study. 
+These scripts are designed to constitute a pipeline which begins with raw VLA observation data and eventually produces science-ready data products, particularly star formation rates of the given target galaxies. The primary goal of this project is to attain star formation rates (SFRs) for each of the target galaxies, which can then be analyzed and compared to SFRs previously attained through infrared and optical study. 
 
 The project is broken up into five major components.
 
