@@ -210,10 +210,6 @@ def plot_all_SFRs():
     plt.close()
 
 
-
-
-
-
 def plot_lum_vs_z():
 
     lum_ok = np.array(t_ok['Luminosity'])
@@ -262,9 +258,6 @@ def plot_lum_vs_z():
     plt.savefig('lum_vs_z.png', overwrite=True)
     plt.clf()
     plt.close()
-
-
-
 
 
 def plot_relative():
@@ -321,7 +314,6 @@ def plot_relative():
     plt.savefig('SFR_relative_plot.png', overwrite=True)
     plt.clf()
     plt.close()
-
 
 
 plot_all_SFRs()
