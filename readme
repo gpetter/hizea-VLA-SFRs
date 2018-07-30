@@ -1,4 +1,4 @@
-These scripts are designed to constitute a pipeline which begins with raw VLA observation data and eventually produces science-ready data, particularly star formation rates of the given target galaxies. The primary goal of this project is to attain star formation rates (SFRs) for each of the target galaxies, which can then be analyzed and compared to SFRs previously attained through infrared and optical study. 
+These scripts are designed to constitute a pipeline which begins with raw VLA visibility data and eventually produces science-ready data products, particularly star formation rates of the given target galaxies. The primary goal of this project is to attain star formation rates (SFRs) for each of the target galaxies, which can then be analyzed and compared to SFRs previously attained through infrared study. 
 
 The project is broken up into five major components.
 
@@ -8,17 +8,17 @@ Raw interferometric data comes in the form of visibilites, which must be Fourier
 
 Thus, "generate_cleans" goes to every galaxy's directory and writes a simple script which can be run in CASA, which will construct an image and clean it, as well as perform other CASA commands. It also generates an executable which will tell each of the many scripts how to run. Then, by simply running the executable, all 20+ images can be constructed and cleaned simultaneously. 
 
-2. Measure fluxes from sources : MeasureFluxes.py
+2. Measure fluxes from sources : Imfit.py
 
 Once we have nice images to work with, we want to measure the flux density from the target galaxy, as this will enable us to calculate a SFR in step 3. 
 
-Here we do simple aperture photometry, a circle is put down over the source, and the pixel values are summed up and normalized. This function returns a flux density, an uncertainty, and other useful parameters of the image.
+Here we do 2D Gaussian fits to the sources using CASA's Imfit task to yield flux densities and errors. To constrain the solution, we fix the center of the fit to the centroid from an HST image of the galaxy. We also fix the major and minor axis of the fit to the size of the beam, because we expect these sources to be unresolved by our 2'' VLA observation. 
 
 3. Calculate star formation rates : CalcSFRs.py
 
 An equation in Murphy et. al (2011) relates the non-thermal luminosity of a galaxy observed at a certain frequency to the star formation rate. Thus, if we convert our flux density to a luminosity using the inverse square law, we can calculate a star formation rate. We use the spectral luminosity distance from Condon & Matthews (2018) for the distance.
 
-This script handles the calculation of a SFR and uncertainty.
+This script handles the calculation of a SFR and uncertainty, along with a luminosity.
 
 4. Constructing a table : ConstructTable.py
 
@@ -27,3 +27,34 @@ Organizing all of the relevant data in an Astropy table is convenient for doing 
 5. Make plots : MakePlots.py
 
 Plot our 21 cm SFR vs IR SFR. Because of the FIR-radio correlation, the IR and radio SFRs should be 1:1. A linear fit to these data should provide a good metric of whether this is true in our case.
+
+
+Instructions for use:
+
+1. Clone this repository to a directory that you would like to work from. 
+
+2. Open 'GetGalaxyList.py', and change the data_path variable to the full path to your VLA data directory. Ex: data_path = '/users/gpetter/DATA/data_v1'. This directory should contain a bunch of directories, one for each galaxy, titled for example 'J110702.87'. 
+
+3. Open 'generate_cleans.py', and scroll down to the bottom. You will see three boolean variables, 'run_suite', 'run_dirty', and 'run_clean'. You should choose one variable to set True, and leave the other two False. If this is the first time imaging the data, you should choose either 'run_suite' or 'run_dirty'. 'run_dirty' will construct a dirty image for each source, and save the PSF and the clean threshold, so that it never has to be calculated again. From then on, you can just set 'run_clean' to True, and then tclean will start with the PSF, saving time as you perfect the cleans.
+
+Alternatively, for the first run, you could set 'run_suite' to True, and tclean will make a dirty image, then immediately clean the image afterwards. Again, after the first imaging run, you can just use 'run_clean = True', and the image will be recleaned by restarting with the PSF. 
+
+3. Now open python 2.7, and run generate_cleans.py. This will create a python script in each galaxy's directory based on what is there. You should now have an executable in your working directory titled 'pipelinerun'. You can go to a cluster node and type >pipelinerun, or run a batch job to save time. 
+
+4. Read a book or five while you wait.
+
+4.5. It is likely that some of your cleans will not be perfect after your first run. A common problem is that the image size is not big enough, yet it doesn't make sense computationally to make every single image 20000**2 pixels if only some have bright sources outside the primary beam. Therefore you can add problem galaxy names to the list in the function 'generate_cleans.readjust_size()', which will make the problematic images bigger and adjust the cutout coordinates accordingly. 
+
+You can write similar functions to adjust tclean parameters for individual problem galaxies. For example, 'generate_cleans.readjust_threshold()' changes the sidelobe threshold for images which are gratuitously masking sidelobes.
+
+5. Once you have cleaned the images, you want to measure fluxes by fitting Gaussians. To do this, we need to fix the fit center to the centroid of an HST image. Therefore, you need to go to each galaxy's directory and stick a corresponding HST fits file in, conforming to the format 'J' + first 4 RA digits + '_HST.fits', ex: 'J1107_HST.fits'. This is annoying, sorry, but I couldn't figure a way to code this given the way the HST titles are formatted. Perhaps you could figure out a way to go find the correct HST image. Otherwise, this step need be done only once.
+
+6. Now open 'Imfit.py'. If you are assuming that all galaxies will be unresolved by the 2'' beam, set the 'fixed_width' parameter = True. This will fix the width of the Gaussian fit to be the beam size. Otherwise, the beam size will be provided as an unfixed estimate of the width. If most appear unresolved but some do appear resolved, add those names to the 'resolved_list' parameter.
+
+6.5. If you provide any estimates to imfit, you must provide an estimate for every parameter for some reason. Therefore, my code currently needs an estimate of the peak before you can run imfit. A hack to do this is to run 'ConstructTable.py' prematurely, setting the parameter 'get_imfits = False'. This will run my deprecated photometry code, which in the process measures the maximum pixel within an aperture, and writes that value to a text file. You can now use imfit which will read that text file and use the maximum as a peak estimate. 
+
+6. Now run 'Imfit.py'. This will generate a imfit script in each galaxy, and another pipeline executable which will start CASA and run Imfit on each galaxy. This is titled 'imfitrun', and should appear in your working directory after running 'Imfit.py'. SSH into a cluster node and type >imfitrun. This should take only a few minutes. 
+
+7. Summaries of your fitting are now stored in each galaxy's directory. Open 'ConstructTable.py', and set parameters based on whether you want SFRs with sig figs or not, and provide the name of the table file of the VLA sample. You should set 'get_imfits = True'. You can now run ConstructTable.py, which will fetch imfit stats such as flux, error, etc. It will then call the CalcSFRs script, which converts a flux and redshift to a luminosity and then SFR. (If you want to change the Hubble constant or alpha parameter, you should open CalcSFRs.py and change them.) This will save a table with all of the desired data products of the project, including a flux, luminosity, and SFR, all with errors. It also contains columns with information such as whether each source was a detection or not. 
+
+8. You can now plot the data to visualize it as you please. You can run MakePlots.py, choosing which functions to execute. The relevant ones are typically plot_all_SFRs() and plot_lum_vs_z(). You can also run PostageStamps.py and HST_PostageStamps.py, to visualize your cleaned image cutouts, with the Gaussian fit width overlaid, or the HST image with radio image contours overlaid, respectively. 

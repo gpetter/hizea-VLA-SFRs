@@ -1,19 +1,20 @@
 import os
 from astropy.io import fits
 from astropy import wcs
+import GetGalaxyList
+reload(GetGalaxyList)
 
 current_dir = os.getcwd()
 
 ##########################################################################################
 # parameters
-data_path = '/users/gpetter/DATA/data_v1'
 fix_width = True
+resolved_list = ['J082733.87', 'J082638.41', 'J110702.87', 'J121955.77', 'J122949.83', 'J134136.79', 'J211824.06',
+                 'J161332.52']
 ##########################################################################################
 
 # Go to directory, get list of galaxies
-names = os.listdir(data_path)
-os.chdir(data_path)
-
+names = GetGalaxyList.return_galaxy_list(1)
 paths_to_files, paths_to_dirs = [], []
 
 
@@ -38,7 +39,6 @@ def new_imfit():
         w = wcs.WCS(hdu[0])
         trans = w.all_world2pix(ra, dec, 1, 1, 0)
         x_pix, y_pix = trans[0], trans[1]
-        print(x_pix, y_pix)
 
         # Get beam size
         bmaj = hdu[0].header['bmaj']
@@ -50,7 +50,7 @@ def new_imfit():
         with open('stdev.txt', 'r') as f_rms:
             rms = f_rms.readline()
 
-        if fix_width:
+        if fix_width and (name not in resolved_list):
             fix_str = 'xyab'
             summary_str = 'fixed_summary.log'
         else:
@@ -73,9 +73,10 @@ def new_imfit():
 
 new_imfit()
 
-os.chdir('/users/gpetter/DATA')
+os.chdir(current_dir)
 with open('imfitrun', 'w') as f:
     for x in range(len(paths_to_files)):
         f.write("""cd %s; xvfb-run -d casa -r 5.3.0-143 --nogui -c %s\n""" % (paths_to_dirs[x], paths_to_files[x]))
 
-os.chdir(current_dir)
+st = os.stat('imfitrun')
+os.chmod('imfitrun', st.st_mode | 0111)

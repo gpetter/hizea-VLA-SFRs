@@ -1,11 +1,13 @@
 import os
+import stat
 import GetGalaxyList
 reload(GetGalaxyList)
 
 vises = []
 
-names = GetGalaxyList.return_galaxy_list(2)
 current_dir = os.getcwd()
+names = GetGalaxyList.return_galaxy_list(2)
+
 
 # for each galaxy, find all .ms files and append to visibilities list
 for name in names:
@@ -29,23 +31,26 @@ cutout_size = 200  # Using 0.2 arcsec pixel, a cutout of 40 arcsec is produced
 cut_frame = [img_size/2-cutout_size/2, img_size/2+cutout_size/2]
 ############################################################################
 
+
 # Make image sizes bigger for fields which have bright sources off to the side
 def readjust_size(name):
-    if name == 'J134136.79' or name == 'J090842.76' or name == 'J010624.25'\
-            or name == 'J090133.42' or name == 'J121955.77' or name == 'J123215.82' \
-            or name == 'J211625.14' or name == 'J211824.06':
+    big14k = ['J134136.79', 'J090842.76', 'J010624.25', 'J090133.42', 'J121955.77', 'J123215.82', 'J211625.14',
+              'J211824.06']
+    big15k = ['J112518.89', 'J214000.49']
+    if name in big14k:
         bigger = 14000
         return [bigger, [bigger/2-cutout_size/2, bigger/2+cutout_size/2]]
-    elif name == 'J112518.89' or name == 'J214000.49':
+    elif name in big15k:
         bigger = 15000
         return [bigger, [bigger / 2 - cutout_size / 2, bigger / 2 + cutout_size / 2]]
     else:
         return [img_size, cut_frame]
 
-# Adjust sidelobe threshold in the automasking routine if prominent sidelobes remain in the image
+
+# Adjust sidelobe threshold in the automasking routine if prominent sidelobes are being burned into image
 def readjust_threshold(name):
-    if name == 'J122949.83' or name == 'J090133.42' or name == 'J094417.84' or name == 'J112518.89'\
-            or name == 'J211824.06' or name == 'J214000.49' or name == 'J134136.79':
+    problem_gals = ['J122949.83', 'J090133.42', 'J094417.84', 'J112518.89', 'J211824.06', 'J214000.49', 'J134136.79']
+    if name in problem_gals:
         return 5.0
     else:
         return 3.0
@@ -239,7 +244,7 @@ def statistics():
 
 run_suite = False
 run_dirty = False
-run_clean = False
+run_clean = True
 
 if run_suite:
     make_dirty_images()
@@ -261,3 +266,6 @@ os.chdir(current_dir)
 with open('pipelinerun', 'w') as f:
     for x in range(len(paths_to_files)):
         f.write("""cd %s; xvfb-run -d casa -r 5.3.0-143 --nogui -c %s\n""" % (paths_to_dirs[x], paths_to_files[x]))
+
+st = os.stat('pipelinerun')
+os.chmod('pipelinerun', st.st_mode | 0111)

@@ -188,15 +188,9 @@ for name in names:
 # Filter table to contain only sources with associated data presently
 t_data = t[np.where(t['data'])[0]]
 
-# Filter table to contain only detections
-if get_imfits:
-    t_detect = t_data[np.where(t_data['detect'])[0]]
-else:
-    t_detect = t_data[np.where(np.multiply(t_data['detect_pix'], t_data['detect_aper']))[0]]
 
 print(t_data)
 
 os.chdir('/users/gpetter/PycharmProjects/untitled')
-t_detect.write('detected_table.csv', format='csv', overwrite=True)
 t_data.write('table.csv', format='csv', overwrite=True)
 t_data.write('textable', format='aastex', overwrite=True)

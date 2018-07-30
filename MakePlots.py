@@ -5,28 +5,32 @@ from astropy.table import Table
 import numpy as np
 from scipy.optimize import curve_fit
 
+####################################################################################
+# parameters
 
 # Keep this true
 use_imfit = True
+# Use plt.annotate to place the names of the galaxies next to points
+label_points = False
+####################################################################################
 
 # Read in astropy table
 t = Table.read('table.csv')
-
-# Read in table of detections only
-t_detect = Table.read('detected_table.csv')
 
 if use_imfit:
     correlation = t['detect']
 else:
     correlation = np.multiply(t['detect_pix'], t['detect_aper'])
 
+# Table containing detections only
+t_detect = t[np.where(correlation == 1)[0]]
+
 # Filter table into 3 separate tables, one for detections, non-detections, and flagged sources (AGN)
 t_nondetect = t[np.where(correlation == 0)[0]]
 t_ok = t_detect[np.where(t_detect['21 cm SFR'] < 1000)[0]]
 t_bad = t_detect[np.where(t_detect['21 cm SFR'] > 1000)[0]]
 
-# Use plt.annotate to place the names of the galaxies next to points
-label_points = False
+
 
 
 # Do two weighted linear fits to detections only. Fix the second fit to have a y-intercept of zero
@@ -129,8 +133,8 @@ def plot_all_SFRs():
 
 
     # Titles
-    plt.suptitle('Star Formation Comparison (All Sources)', y=0.95)
-    fig.text(0.05, 0.5, '21cm SFR $(M_{\odot} yr^{-1})$', va='center', rotation='vertical')
+    plt.suptitle('Star Formation Rate Comparison (All Sources)', y=0.92)
+    fig.text(0.05, 0.5, '1.5 GHz SFR $(M_{\odot} yr^{-1})$', va='center', rotation='vertical')
     plt.xlabel('IR SFR $(M_{\odot} yr^{-1})$')
 
     # Legend
@@ -321,7 +325,4 @@ def plot_relative():
 
 
 plot_all_SFRs()
-#plot_good_SFRs()
-#plot_lum_vs_z()
-#plot_relative()
 
