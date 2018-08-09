@@ -7,7 +7,7 @@ reload(GetGalaxyList)
 
 current_dir = os.getcwd()
 
-names = GetGalaxyList.return_galaxy_list(1)
+names = GetGalaxyList.return_galaxy_list()
 
 # Sort by RA
 stripped_names = []
@@ -53,7 +53,7 @@ for z in range(len(sorted_names)):
 
     x_iter = x_iter + x_size + x_start
 
-    with open('detect.txt', 'r') as f:
+    with open('text/detect.txt', 'r') as f:
         truth = f.readline()
 
     if int(truth) == 1:
@@ -68,7 +68,7 @@ for z in range(len(sorted_names)):
     f = aplpy.FITSFigure(HST_name, figure=fig, subplot=[x, y, x_size, y_size])
 
     f.show_grayscale()
-    f.show_contour(imgname, alpha=.5, linewidths=0.5)
+    f.show_contour(imgname, alpha=.8, linewidths=0.5)
 
     f.set_title('%s' % sorted_names[z], weight=weighting)
 

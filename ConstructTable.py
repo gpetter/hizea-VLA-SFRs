@@ -59,14 +59,14 @@ t['Dec (J2000)'].unit = 'deg'
 t['IR SFR'].unit = 'solMass/yr'
 t['21 cm Flux'].unit = 'Jy'
 t['21 cm Flux Error'].unit = 'Jy'
-t['Luminosity'].unit = 'erg/s'
-t['Luminosity Error (stat.)'].unit = 'erg/s'
+t['Luminosity'].unit = 'erg/(s*Hz)'
+t['Luminosity Error (stat.)'].unit = 'erg/(s*Hz)'
 t['21 cm SFR'].unit = 'solMass/yr'
 t['21 cm SFR Error (stat.)'].unit = 'solMass/yr'
 t['RMS'].unit = 'Jy/beam'
 
 
-names = GetGalaxyList.return_galaxy_list(1)
+names = GetGalaxyList.return_galaxy_list()
 
 # Go to each galaxy, call photometry and calculate SFRs scripts, and add the outputs to the table
 for name in names:
@@ -127,7 +127,7 @@ for name in names:
             t['21 cm Flux Error'][idx] = Flux_error
 
 
-    with open((name + '/max.txt'), 'w') as f_max:
+    with open((name + '/text/max.txt'), 'w') as f_max:
         f_max.write('%s' % float(flux_measured[5]))
 
 
@@ -156,7 +156,7 @@ for name in names:
     if detection:
         params_measured = CalcSFRs.calc_params(Flux, Flux_error, t['Z'][idx], 0.001)
         os.chdir(name)
-        with open('detect.txt', 'w') as f:
+        with open('text/detect.txt', 'w') as f:
             f.write('%s' % 1)
         os.chdir('..')
 
@@ -164,7 +164,7 @@ for name in names:
     else:
         params_measured = CalcSFRs.calc_params(3*Flux_error, Flux_error, t['Z'][idx], 0.001)
         os.chdir(name)
-        with open('detect.txt', 'w') as f:
+        with open('text/detect.txt', 'w') as f:
             f.write('%s' % 0)
         os.chdir('..')
 
@@ -193,4 +193,4 @@ print(t_data)
 
 os.chdir('/users/gpetter/PycharmProjects/untitled')
 t_data.write('table.csv', format='csv', overwrite=True)
-t_data.write('textable', format='aastex', overwrite=True)
+#t_data['Name', 'RA (J2000)', 'Dec (J2000)', 'Z', 'IR SFR', '21 cm Flux', '21 cm Flux Error', 'Luminosity', 'Luminosity Error (stat.)', '21 cm SFR', '21 cm SFR Error (stat.)', 'detect'].write('textable', format='aastex', overwrite=True)

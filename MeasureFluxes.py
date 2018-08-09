@@ -83,9 +83,9 @@ def photometry(gal_name):
     data = hdu[0].data[0][0]
 
     # open text file containing the scaled MAD and beam area saved by generate_cleans.statistics()
-    with open('stdev.txt', 'r') as f:
+    with open('text/stdev.txt', 'r') as f:
         std_dev = float(f.readline())  # Jy/beam
-    with open('beamarea.txt', 'r') as f:
+    with open('text/beamarea.txt', 'r') as f:
         beamarea = float(f.readline())  # arcsec^2
 
     # create error image to pass to astropy photometry to calculate flux errors

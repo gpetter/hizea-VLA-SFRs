@@ -11,7 +11,7 @@ from scipy.optimize import curve_fit
 # Keep this true
 use_imfit = True
 # Use plt.annotate to place the names of the galaxies next to points
-label_points = False
+label_points = True
 ####################################################################################
 
 # Read in astropy table
@@ -82,7 +82,7 @@ def plot_all_SFRs():
 
     # Making arrays of SFRs and uncertainties for non-AGN detections
     irsfrok = np.array(t_ok['IR SFR']).astype(float)
-    irok_uncertainty = 0.2*irsfrok  # Fiducial x error bars
+    irok_uncertainty = np.array(t_ok['IR SFR Err'])
     radiosfr_ok = np.array(t_ok['21 cm SFR']).astype(float)
     sfr_ok_uncertainty = np.array(t_ok['21 cm SFR Error (stat.)']).astype(float)
     names = t_ok['Name']
@@ -90,21 +90,21 @@ def plot_all_SFRs():
 
     # for AGN
     flagIRSFR = np.array(t_bad['IR SFR'])
-    flagIR_uncertainty = 0.2*flagIRSFR
+    flagIR_uncertainty = np.array(t_bad['IR SFR Err'])
     flagRadioSFR = np.array(t_bad['21 cm SFR'])
     flag_SFR_uncertainty = np.array(t_bad['21 cm SFR Error (stat.)'])
     flagnames = t_bad['Name']
 
     # and for non-detections
     ir_non_detect = np.array(t_nondetect['IR SFR'])
-    ir_non_unc = 0.2*ir_non_detect
+    ir_non_unc = np.array(t_nondetect['IR SFR Err'])
     radio_non = np.array(t_nondetect['21 cm SFR'])
     radio_non_unc = np.array(t_nondetect['21 cm SFR Error (stat.)'])
     non_names = t_nondetect['Name']
 
     # Get indices of sources which lie below proposed detection limit
-    detect_x_lims = (irsfrok < 30)
-    non_detect_x_lims = (ir_non_detect < 30)
+    #detect_x_lims = (irsfrok < 30)
+    #non_detect_x_lims = (ir_non_detect < 30)
 
     # Generate one-to-one line
     one_to_one = np.poly1d([1, 0])
@@ -116,31 +116,32 @@ def plot_all_SFRs():
 
     # Plot all data with different markers. For non-detections, make y-axis upper-limit arrows. For sources below
     # proposed detection limit, make x-axis upper limit arrows.
-    ok = ax2.errorbar(irsfrok, radiosfr_ok, yerr=sfr_ok_uncertainty, xerr=irok_uncertainty, xuplims=detect_x_lims, fmt='o', ecolor='k', c='b',
+    ok = ax2.errorbar(irsfrok, radiosfr_ok, yerr=sfr_ok_uncertainty, xerr=irok_uncertainty, fmt='o', ecolor='k', c='b',
                       capsize=2)
     flagged = ax.errorbar(flagIRSFR, flagRadioSFR, yerr=flag_SFR_uncertainty, xerr=flagIR_uncertainty, fmt='o',
                            ecolor='k', c='r', capsize=2, marker='x')
-    non_detect = ax2.errorbar(ir_non_detect, radio_non, yerr=2 * radio_non / 10, xerr=ir_non_unc, xuplims=non_detect_x_lims, fmt='o',
+    non_detect = ax2.errorbar(ir_non_detect, radio_non, yerr=2 * radio_non / 10, xerr=ir_non_unc, fmt='o',
                               ecolor='k', c='gold', capsize=2, uplims=True, marker='v')
 
     # Plot the linear fits, the one-to-one line, and the detection limit dashed lines
-    fit_line = ax2.plot(np.linspace(0, x_axis_lim), fits[0](np.linspace(0, x_axis_lim)), 'g')
+
+    #fit_line = ax2.plot(np.linspace(0, x_axis_lim), fits[0](np.linspace(0, x_axis_lim)), 'g')
     one_to_one_line = ax2.plot(np.linspace(0, x_axis_lim), one_to_one(np.linspace(0, x_axis_lim)), 'k--')
-    fixed_line = ax2.plot(np.linspace(0, x_axis_lim), fits[1](np.linspace(0, x_axis_lim)), 'c')
+    fixed_line = ax2.plot(np.linspace(0, x_axis_lim), np.poly1d([1./2.5, 0])(np.linspace(0, x_axis_lim)), 'c')
     ir_lim_line = ax.axvline(x=30, color='orange', ls='dashed')
     ax2.vlines(x=30, ymin=30, ymax=y_axis_lim, colors='orange', linestyles='dashed')
     ax2.hlines(y=30, xmin=30, xmax=x_axis_lim, colors='orange', linestyles='dashed')
 
 
     # Titles
-    plt.suptitle('Star Formation Rate Comparison (All Sources)', y=0.92)
+    plt.suptitle('Star Formation Rate Comparison', y=0.91)
     fig.text(0.05, 0.5, '1.5 GHz SFR $(M_{\odot} yr^{-1})$', va='center', rotation='vertical')
     plt.xlabel('IR SFR $(M_{\odot} yr^{-1})$')
 
     # Legend
-    ax.legend((ok, flagged, non_detect, fit_line[0], one_to_one_line[0], fixed_line[0], ir_lim_line),
-               ('Detections', 'AGN', 'Non-Detection Upper Limits', 'Weighted Linear Fit', 'One to one',
-                'Weighted Fit Fixed', 'Proposed Detection Limit'), prop={'size': 8})
+    ax.legend((ok, flagged, non_detect, one_to_one_line[0], fixed_line[0], ir_lim_line),
+               ('Detections', 'AGN', 'Non-Detection Upper Limits', 'One to one',
+                'Factor 2.5 Suppressed', 'Proposed Detection Limit'), prop={'size': 8})
 
     # put equations of linear fits on plot
     #plt.annotate('%s' % fits[0], (45, 180))
@@ -205,7 +206,7 @@ def plot_all_SFRs():
             ax2.annotate(non_names[x].split('.')[0], (ir_non_detect[x], radio_non[x]), xytext=(0, 2), textcoords='offset points',
                          ha='right', va='bottom')
 
-    plt.savefig('SFR_all_plot.png', overwrite=True)
+    plt.savefig('SFR_all_plot.png', overwrite=True, bbox_inches='tight')
     plt.clf()
     plt.close()
 
@@ -215,35 +216,58 @@ def plot_lum_vs_z():
     lum_ok = np.array(t_ok['Luminosity'])
     lum_uncertainty_ok = np.array(t_ok['Luminosity Error (stat.)'])
     z_ok = np.array(t_ok['Z'])
-    z_uncertainty_ok = z_ok*.05
+    z_uncertainty_ok = 0
     names_ok = t_ok['Name']
 
     lum_bad = np.array(t_bad['Luminosity'])
     lum_uncertainty_bad = np.array(t_bad['Luminosity Error (stat.)'])
     z_bad = np.array(t_bad['Z'])
-    z_uncertainty_bad = z_bad * .05
+    z_uncertainty_bad = 0
     names_bad = t_bad['Name']
 
     lum_non = np.array(t_nondetect['Luminosity'])
     lum_uncertainty_non = np.array(t_nondetect['Luminosity Error (stat.)'])
     z_non = np.array(t_nondetect['Z'])
-    z_uncertainty_non = z_non * .05
+    z_uncertainty_non = 0
     names_non = t_nondetect['Name']
 
-    plt.figure(4, figsize=(15, 12), dpi=300)
-    ok = plt.errorbar(z_ok, lum_ok, yerr=lum_uncertainty_ok, xerr=z_uncertainty_ok,
+    fig, (ax, ax2) = plt.subplots(2, 1, sharex=True, figsize=(10, 10), dpi=300, gridspec_kw={'height_ratios': [1, 4]})
+
+    ok = ax2.errorbar(z_ok, lum_ok, yerr=lum_uncertainty_ok, xerr=z_uncertainty_ok,
                       fmt='o', ecolor='k', capsize=2, c='b')
-    bad = plt.errorbar(z_bad, lum_bad, yerr=lum_uncertainty_bad, xerr=z_uncertainty_bad,
+    bad = ax.errorbar(z_bad, lum_bad, yerr=lum_uncertainty_bad, xerr=z_uncertainty_bad,
                        fmt='o', ecolor='k', capsize=2, c='r', marker='x')
-    non = plt.errorbar(z_non, lum_non, yerr=lum_non/5, xerr=z_uncertainty_non,
+    non = ax2.errorbar(z_non, lum_non, yerr=lum_non/5, xerr=z_uncertainty_non,
                        fmt='o', ecolor='k', capsize=2, c='gold', uplims=True, marker='v')
 
-    plt.legend((ok, bad, non), ('Detections', 'Possible AGN', 'Non-Detection Upper Limits'))
+    ax.legend((ok, bad, non), ('Detections', 'AGN', 'Non-Detection Upper Limits'))
+
+    plt.suptitle('Luminosity vs. Redshift', y=0.92)
+    fig.text(0.08, 0.5, 'Luminosity (erg s$^{-1}$ Hz$^{-1}$)', va='center', rotation='vertical')
 
     plt.yscale('log')
     plt.xlabel('z')
-    plt.ylabel('Luminosity (erg/s)')
-    plt.title('Luminosity vs. Redshift')
+
+    # Hack to make the diagonal hashes on broken axis
+    d = .015  # how big to make the diagonal lines in axes coordinates
+    # arguments to pass to plot, just so we don't keep repeating them
+    kwargs = dict(transform=ax.transAxes, color='k', clip_on=False)
+    ax.plot((-d, +d), (-3.5 * d, 3.5 * d), **kwargs)  # top-left diagonal
+    ax.plot((1 - d, 1 + d), (-3.5 * d, +3.5 * d), **kwargs)  # top-right diagonal
+    # plt.gca().set_aspect('equal', adjustable='box')
+
+    kwargs.update(transform=ax2.transAxes)  # switch to the bottom axes
+    ax2.plot((-d, +d), (1 - d, 1 + d), **kwargs)  # bottom-left diagonal
+    ax2.plot((1 - d, 1 + d), (1 - d, 1 + d), **kwargs)  # bottom-right diagonal
+
+    # hide the spines between ax and ax2
+    ax.spines['bottom'].set_visible(False)
+    ax2.spines['top'].set_visible(False)
+    ax.xaxis.tick_top()
+    ax.tick_params(labeltop='off')  # don't put tick labels at the top
+    ax2.xaxis.tick_bottom()
+
+
     if label_points:
         for x in range(len(lum_ok)):
             plt.annotate(names_ok[x].split('.')[0], (z_ok[x], lum_ok[x]), xytext=(0, 2), textcoords='offset points',
@@ -255,7 +279,7 @@ def plot_lum_vs_z():
         for x in range(len(lum_non)):
             plt.annotate(names_non[x].split('.')[0], (z_non[x], lum_non[x]), xytext=(0, 2), textcoords='offset points',
                          ha='right', va='bottom')
-    plt.savefig('lum_vs_z.png', overwrite=True)
+    plt.savefig('lum_vs_z.png', overwrite=True, bbox_inches='tight')
     plt.clf()
     plt.close()
 
@@ -317,4 +341,4 @@ def plot_relative():
 
 
 plot_all_SFRs()
-
+plot_lum_vs_z()

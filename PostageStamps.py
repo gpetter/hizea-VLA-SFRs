@@ -7,7 +7,9 @@ reload(GetGalaxyList)
 
 current_dir = os.getcwd()
 
-sorted_names = GetGalaxyList.return_galaxy_list(1)
+sorted_names = GetGalaxyList.return_galaxy_list()
+
+
 
 num_gals = len(sorted_names)
 if num_gals/5. >= 4.:
@@ -29,7 +31,7 @@ x_iter = 0
 y_iter = 0
 
 
-for z in range(len(sorted_names)):
+for z in range(num_gals):
     os.chdir(sorted_names[z])
 
     if z % cols == 0 and z != 0:
@@ -41,7 +43,7 @@ for z in range(len(sorted_names)):
 
     x_iter = x_iter + x_size + x_start
 
-    with open('detect.txt', 'r') as f:
+    with open('text/detect.txt', 'r') as f:
         truth = f.readline()
 
     if int(truth) == 1:
@@ -59,11 +61,11 @@ for z in range(len(sorted_names)):
 
     #center = f.pixel2world(100, 100)
     #f.show_circles([center[0]], [center[1]], [4.0 / 3600.0], edgecolor='magenta')
-    with open('center_HST.txt', 'r') as f_center:
+    with open('text/center_HST.txt', 'r') as f_center:
         lines = f_center.readlines()
         HST_ra = float(lines[0])
         HST_dec = float(lines[1])
-    with open('width.txt', 'r') as f_width:
+    with open('text/width.txt', 'r') as f_width:
         lines = f_width.readlines()
         maj_width = float(lines[0])
         min_width = float(lines[1])

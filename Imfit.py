@@ -9,12 +9,16 @@ current_dir = os.getcwd()
 ##########################################################################################
 # parameters
 fix_width = True
-resolved_list = ['J082733.87', 'J082638.41', 'J110702.87', 'J121955.77', 'J122949.83', 'J134136.79', 'J211824.06',
-                 'J161332.52']
+allow_resolved = False
+if allow_resolved:
+    resolved_list = ['J082733.87', 'J082638.41', 'J110702.87', 'J121955.77', 'J122949.83', 'J134136.79', 'J211824.06',
+            'J161332.52']
+else:
+    resolved_list = []
 ##########################################################################################
 
 # Go to directory, get list of galaxies
-names = GetGalaxyList.return_galaxy_list(1)
+names = GetGalaxyList.return_galaxy_list()
 paths_to_files, paths_to_dirs = [], []
 
 
@@ -30,7 +34,7 @@ def new_imfit():
         ra, dec = trans_hst[0], trans_hst[1]
 
         # Save centroid RA, Dec to file
-        with open('center_HST.txt', 'w') as f_center:
+        with open('text/center_HST.txt', 'w') as f_center:
             f_center.write('%s\n' % ra)
             f_center.write('%s\n' % dec)
 
@@ -45,9 +49,9 @@ def new_imfit():
         bmin = hdu[0].header['bmin']
 
         # Retrieve max and rms to feed as estimates to imfit
-        with open('max.txt', 'r') as f_max:
+        with open('text/max.txt', 'r') as f_max:
             maximum = f_max.readline()
-        with open('stdev.txt', 'r') as f_rms:
+        with open('text/stdev.txt', 'r') as f_rms:
             rms = f_rms.readline()
 
         if fix_width and (name not in resolved_list):
@@ -57,14 +61,14 @@ def new_imfit():
             fix_str = 'xy'
             summary_str = 'summary.log'
 
-        with open('estimates.txt', 'w') as f_est:
+        with open('text/estimates.txt', 'w') as f_est:
             f_est.write('%s, %s, %s, %sdeg, %sdeg, 0deg, %s' % (maximum, x_pix, y_pix, bmaj, bmin, fix_str))
 
         with open('run_imfit.py', 'w') as f:
             paths_to_dirs.append(os.getcwd())
             paths_to_files.append(os.path.realpath(f.name))
 
-            f.write("""imfit(imagename='%s.cutout.pbcor', box='85,85,115,115', estimates = 'estimates.txt', 
+            f.write("""imfit(imagename='%s.cutout.pbcor', box='85,85,115,115', estimates = 'text/estimates.txt', 
             logfile = 'imfit.log', append=False, residual='test_residual', 
             model='test_model', dooff=False, rms='%sJy/beam', summary='summary.log')""" % (name, rms))
 
