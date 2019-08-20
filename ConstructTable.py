@@ -193,4 +193,4 @@ print(t_data)
 
 os.chdir('/users/gpetter/PycharmProjects/untitled')
 t_data.write('table.csv', format='csv', overwrite=True)
-#t_data['Name', 'RA (J2000)', 'Dec (J2000)', 'Z', 'IR SFR', '21 cm Flux', '21 cm Flux Error', 'Luminosity', 'Luminosity Error (stat.)', '21 cm SFR', '21 cm SFR Error (stat.)', 'detect'].write('textable', format='aastex', overwrite=True)
+#t_data['Name', 'Z', 'IR SFR', 'IR SFR Err', '21 cm Flux', '21 cm Flux Error', 'Luminosity', 'Luminosity Error (stat.)', '21 cm SFR', '21 cm SFR Error (stat.)', 'detect'].write('textable', format='aastex', overwrite=True)

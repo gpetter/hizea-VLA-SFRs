@@ -1,0 +1,15 @@
+cd /lustre/naasc/students/gpetter/data_v2/J010624.25; xvfb-run -d casa -r 5.3.0-143 --nogui -c /lustre/naasc/students/gpetter/data_v2/J010624.25/run_tclean_J010624.py
+cd /lustre/naasc/students/gpetter/data_v2/J082733.87; xvfb-run -d casa -r 5.3.0-143 --nogui -c /lustre/naasc/students/gpetter/data_v2/J082733.87/run_tclean_J082733.py
+cd /lustre/naasc/students/gpetter/data_v2/J090133.42; xvfb-run -d casa -r 5.3.0-143 --nogui -c /lustre/naasc/students/gpetter/data_v2/J090133.42/run_tclean_J090133.py
+cd /lustre/naasc/students/gpetter/data_v2/J090842.76; xvfb-run -d casa -r 5.3.0-143 --nogui -c /lustre/naasc/students/gpetter/data_v2/J090842.76/run_tclean_J090842.py
+cd /lustre/naasc/students/gpetter/data_v2/J094417.84; xvfb-run -d casa -r 5.3.0-143 --nogui -c /lustre/naasc/students/gpetter/data_v2/J094417.84/run_tclean_J094417.py
+cd /lustre/naasc/students/gpetter/data_v2/J103906.96; xvfb-run -d casa -r 5.3.0-143 --nogui -c /lustre/naasc/students/gpetter/data_v2/J103906.96/run_tclean_J103906.py
+cd /lustre/naasc/students/gpetter/data_v2/J110702.87; xvfb-run -d casa -r 5.3.0-143 --nogui -c /lustre/naasc/students/gpetter/data_v2/J110702.87/run_tclean_J110702.py
+cd /lustre/naasc/students/gpetter/data_v2/J112518.89; xvfb-run -d casa -r 5.3.0-143 --nogui -c /lustre/naasc/students/gpetter/data_v2/J112518.89/run_tclean_J112518.py
+cd /lustre/naasc/students/gpetter/data_v2/J121955.77; xvfb-run -d casa -r 5.3.0-143 --nogui -c /lustre/naasc/students/gpetter/data_v2/J121955.77/run_tclean_J121955.py
+cd /lustre/naasc/students/gpetter/data_v2/J122949.83; xvfb-run -d casa -r 5.3.0-143 --nogui -c /lustre/naasc/students/gpetter/data_v2/J122949.83/run_tclean_J122949.py
+cd /lustre/naasc/students/gpetter/data_v2/J123215.82; xvfb-run -d casa -r 5.3.0-143 --nogui -c /lustre/naasc/students/gpetter/data_v2/J123215.82/run_tclean_J123215.py
+cd /lustre/naasc/students/gpetter/data_v2/J124807.15; xvfb-run -d casa -r 5.3.0-143 --nogui -c /lustre/naasc/students/gpetter/data_v2/J124807.15/run_tclean_J124807.py
+cd /lustre/naasc/students/gpetter/data_v2/J150603.69; xvfb-run -d casa -r 5.3.0-143 --nogui -c /lustre/naasc/students/gpetter/data_v2/J150603.69/run_tclean_J150603.py
+cd /lustre/naasc/students/gpetter/data_v2/J211824.06; xvfb-run -d casa -r 5.3.0-143 --nogui -c /lustre/naasc/students/gpetter/data_v2/J211824.06/run_tclean_J211824.py
+cd /lustre/naasc/students/gpetter/data_v2/J225623.75; xvfb-run -d casa -r 5.3.0-143 --nogui -c /lustre/naasc/students/gpetter/data_v2/J225623.75/run_tclean_J225623.py

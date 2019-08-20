@@ -6,7 +6,7 @@ reload(GetGalaxyList)
 vises = []
 
 current_dir = os.getcwd()
-names = GetGalaxyList.return_galaxy_list(2)
+names = GetGalaxyList.return_galaxy_list()
 
 
 # for each galaxy, find all .ms files and append to visibilities list
@@ -242,9 +242,9 @@ def statistics():
 # without deleting the previous images)
 # I would then use only run_clean until I got nice images. This way the PSF doesn't need to be calculated every time
 
-run_suite = False
+run_suite = True
 run_dirty = False
-run_clean = True
+run_clean = False
 
 if run_suite:
     make_dirty_images()

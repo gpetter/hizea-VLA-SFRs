@@ -3,7 +3,7 @@
 # Date: 6/28/18
 # Description: Given a flux density in Jy and a redshift of a galaxy observed at a frequency nu, this code will
 # return a luminosity, star formation rate, and uncertainties.
-# This code uses equations given in Murphy et. al (2011), and Condon & Matthews (2018).
+# This code uses equations given in Murphy et. al (2011), and Condon & Matthews (2018). 
 #
 
 import numpy as np
