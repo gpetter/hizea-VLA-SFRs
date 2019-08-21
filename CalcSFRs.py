@@ -3,7 +3,7 @@
 # Date: 6/28/18
 # Description: Given a flux density in Jy and a redshift of a galaxy observed at a frequency nu, this code will
 # return a luminosity, star formation rate, and uncertainties.
-# This code uses equations given in Murphy et. al (2011), and Condon & Matthews (2018). 
+# This code uses equations given in Murphy et. al (2011), and Condon & Matthews (2018).
 #
 
 import numpy as np
@@ -92,5 +92,14 @@ def calc_params(flux, flux_error, redshift, redshift_error):
     #output.append(SF_syst)
 
     return output
+
+def from_lum(lumin):
+    # Define constants
+    freqs = 1.51976491105  # GHz
+    alphas = -0.7
+
+    SFR = (6.64e-29*(freqs**(-alphas))*lumin)
+
+    return SFR
 
 

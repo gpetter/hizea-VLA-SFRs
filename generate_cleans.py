@@ -12,7 +12,7 @@ names = GetGalaxyList.return_galaxy_list()
 # for each galaxy, find all .ms files and append to visibilities list
 for name in names:
     all_dirs = os.listdir(name)
-    only_ms = [y for y in all_dirs if '.ms' in y]
+    only_ms = [y for y in all_dirs if y.endswith('.ms')]
     vises.append(only_ms)
 
 paths_to_files, paths_to_dirs = [], []
@@ -34,26 +34,62 @@ cut_frame = [img_size/2-cutout_size/2, img_size/2+cutout_size/2]
 
 # Make image sizes bigger for fields which have bright sources off to the side
 def readjust_size(name):
-    big14k = ['J134136.79', 'J090842.76', 'J010624.25', 'J090133.42', 'J121955.77', 'J123215.82', 'J211625.14',
-              'J211824.06']
+    big14k = ['J134136.79', 'J090842.76', 'J010624.25', 'J090133.42', 'J123215.82', 'J211625.14',
+              'J211824.06', 'J110702.87']
     big15k = ['J112518.89', 'J214000.49']
+    big16k = ['J121955.77']
     if name in big14k:
         bigger = 14000
         return [bigger, [bigger/2-cutout_size/2, bigger/2+cutout_size/2]]
     elif name in big15k:
         bigger = 15000
         return [bigger, [bigger / 2 - cutout_size / 2, bigger / 2 + cutout_size / 2]]
+    elif name in big16k:
+        bigger = 16000
+        return [bigger, [bigger / 2 - cutout_size / 2, bigger / 2 + cutout_size / 2]]
     else:
         return [img_size, cut_frame]
 
 
 # Adjust sidelobe threshold in the automasking routine if prominent sidelobes are being burned into image
-def readjust_threshold(name):
-    problem_gals = ['J122949.83', 'J090133.42', 'J094417.84', 'J112518.89', 'J211824.06', 'J214000.49', 'J134136.79']
+def readjust_sidelobe(name):
+    problem_gals = ['J090133.42', 'J124807.15', 'J134136.79', 'J161332.52']
+    special = ['J211824.06']
+    other = ['J123215.82']
+    extra_bad = ['J090133.42', 'J214000.49', 'J134136.79']
+    super_bad = ['J082733.87', 'J094417.84']
+    evil = []
+    vile = ['J112518.89', 'J211625.14']
+    diabolical = ['J010624.25']
+    abhorrent = ['J122949.83']
     if name in problem_gals:
         return 5.0
+    if name in special:
+        return 5.1
+    if name in other:
+        return 5.5
+    elif name in extra_bad:
+	return 6.0
+    elif name in super_bad:
+	return 6.5
+    elif name in evil:
+	return 7.0
+    elif name in vile:
+	return 7.5
+    elif name in diabolical:
+	return 8.5
+    elif name in abhorrent:
+	return 9.0
     else:
         return 3.0
+
+# Adjust sidelobe threshold in the automasking routine if prominent sidelobes are being burned into image
+def readjust_noise(name):
+    problem_gals = []
+    if name in problem_gals:
+        return 6.0
+    else:
+        return 5.0
 
 
 # Creates a python script in each galaxy's directory
@@ -81,8 +117,8 @@ def make_dirty_images():
                 verbose=True, gridder='wproject', wprojplanes=128, pblimit=-1, robust=0.5, imsize=[%s], 
                 cell='0.2arcsec', specmode='mfs', deconvolver='mtmfs', nterms=2, scales=[0,11,28], 
                 interactive=False, niter=0,
-                weighting='briggs', usemask='auto-multithresh', stokes='I', threshold='0.0Jy', calcpsf=True,
-                calcres=True, savemodel='modelcolumn', restart=True) \n \n""" % (vises[x], names[x],
+                weighting='briggs', stokes='I', threshold='0.0Jy', calcpsf=True,
+                calcres=True, savemodel='modelcolumn', restart=False) \n \n""" % (vises[x], names[x],
                                                                                  readjust_size(names[x])[0]))
 
             # will call imstat to measure the MAD of each image, scaled by number*1.4826*MAD
@@ -123,13 +159,21 @@ def clean_images():
             f.write("""\tthreshold=float(lines[0])\n""")
             f.write("""print(threshold)\n \n""")
 
+	    f.write(("""tclean(vis=%s, imagename='%s', field='0', datacolumn='data',
+                   verbose=True, gridder='wproject', wprojplanes=128, pblimit=-1, robust=0.5, imsize=[%s], 
+                   cell='0.2arcsec', specmode='mfs', deconvolver='mtmfs', nterms=2, scales=[0,11,28], """
+                    % (vises[x], names[x], readjust_size(names[x])[0])) + """ interactive=False, niter=50, weighting='briggs',
+                   usemask='auto-multithresh', sidelobethreshold = %s, noisethreshold = %s,""" % (readjust_sidelobe(names[x]), readjust_noise(names[x])) +
+                    """ stokes='I', threshold='%sJy' %(threshold), minbeamfrac=0.0,
+                   savemodel='modelcolumn', calcres=True, calcpsf=True, restart=False) \n \n""")
+
             # run tclean with said threshold, high niter value
             f.write(("""tclean(vis=%s, imagename='%s', field='0', datacolumn='data',
                    verbose=True, gridder='wproject', wprojplanes=128, pblimit=-1, robust=0.5, imsize=[%s], 
                    cell='0.2arcsec', specmode='mfs', deconvolver='mtmfs', nterms=2, scales=[0,11,28], """
                     % (vises[x], names[x], readjust_size(names[x])[0])) + """ interactive=False, niter=20000, weighting='briggs',
-                   usemask='auto-multithresh', sidelobethreshold = %s,""" % readjust_threshold(names[x]) +
-                    """ stokes='I', threshold='%sJy' %(threshold), 
+                   usemask='auto-multithresh', sidelobethreshold = %s, noisethreshold = %s,""" % (readjust_sidelobe(names[x]), readjust_noise(names[x])) +
+                    """ stokes='I', threshold='%sJy' %(threshold), minbeamfrac=0.1,
                    savemodel='modelcolumn', calcres=False, calcpsf=False, restart=True) \n \n""")
 
         os.chdir('..')
@@ -150,6 +194,12 @@ def pb_cor():
             if not clean_has_run:
                 paths_to_dirs.append(os.getcwd())
                 paths_to_files.append(os.path.realpath(f.name))
+	    # retrieve previously saved threshold value
+            f.write("""with open('text/threshold.txt', 'r') as f:\n""")
+            f.write("""\tglobal threshold\n""")
+            f.write("""\tlines=f.readlines()\n""")
+            f.write("""\tthreshold=float(lines[0])\n""")
+            f.write("""print(threshold)\n \n""")
 
             f.write("""widebandpbcor(vis='%s', imagename='%s',""" %(vises[x][0], names[x]) + """ nterms=2,
                    threshold='%sJy' %(threshold), action='pbcor', field='0', spwlist=[0,7,15], chanlist=[0,0,0],
@@ -184,18 +234,18 @@ def cutout():
             f.write("""imsubimage(imagename='%s.pbcor.image.tt0', outfile='%s.cutout.pbcor', overwrite=True,
                     region='box[[%spix, %spix], [%spix, %spix]]')\n \n""" % (names[x], names[x], lower_bound,
                                                                              lower_bound, upper_bound, upper_bound))
-            f.write("""imsubimage(imagename='%s.image.tt0', outfile='%s.cutout', overwrite=True,
-                    region='box[[%spix, %spix], [%spix, %spix]]')\n \n""" % (names[x], names[x], lower_bound,
-                                                                             lower_bound, upper_bound, upper_bound))
+            #f.write("""imsubimage(imagename='%s.image.tt0', outfile='%s.cutout', overwrite=True,
+                    #region='box[[%spix, %spix], [%spix, %spix]]')\n \n""" % (names[x], names[x], lower_bound,
+                                                                             #lower_bound, upper_bound, upper_bound))
 
             f.write("""exportfits(imagename='%s.cutout.pbcor', fitsimage='%s.cutout.pbcor.fits', overwrite=True)\n"""
                     % (names[x], names[x]))
-            f.write("""exportfits(imagename='%s.cutout', fitsimage='%s.cutout.fits', overwrite=True)\n"""
-                    % (names[x], names[x]))
+            #f.write("""exportfits(imagename='%s.cutout', fitsimage='%s.cutout.fits', overwrite=True)\n"""
+                    #% (names[x], names[x]))
             f.write("""exportfits(imagename='%s.pbcor.image.tt0', fitsimage='%s.pbcor.fits', overwrite=True)\n"""
                     % (names[x], names[x]))
-            f.write("""exportfits(imagename='%s.image.tt0', fitsimage='%s.fits', overwrite=True)\n \n"""
-                    % (names[x], names[x]))
+            #f.write("""exportfits(imagename='%s.image.tt0', fitsimage='%s.fits', overwrite=True)\n \n"""
+                    #% (names[x], names[x]))
 
         os.chdir('..')
     cutout_has_run = True
@@ -242,9 +292,9 @@ def statistics():
 # without deleting the previous images)
 # I would then use only run_clean until I got nice images. This way the PSF doesn't need to be calculated every time
 
-run_suite = True
+run_suite = False
 run_dirty = False
-run_clean = False
+run_clean = True
 
 if run_suite:
     make_dirty_images()
@@ -255,17 +305,22 @@ if run_suite:
 elif run_dirty:
     make_dirty_images()
 elif run_clean:
-    clean_images()
+    #clean_images()
     pb_cor()
     cutout()
     statistics()
 
+restarting = False
 
 # generates the pipeline script
 os.chdir(current_dir)
 with open('pipelinerun', 'w') as f:
-    for x in range(len(paths_to_files)):
-        f.write("""cd %s; xvfb-run -d casa -r 5.3.0-143 --nogui -c %s\n""" % (paths_to_dirs[x], paths_to_files[x]))
+    if restarting == True:
+	for x in range(len(paths_to_files)):
+            f.write("""cd %s; rm -rf *.tt*; rm -rf *.pbcor*; rm -rf *.alpha*; rm -rf *.mask; xvfb-run -d casa -r 5.3.0-143 --nogui -c %s\n""" % (paths_to_dirs[x], paths_to_files[x]))
+    elif restarting == False:
+	for x in range(len(paths_to_files)):
+            f.write("""cd %s; xvfb-run -d casa -r 5.3.0-143 --nogui -c %s\n""" % (paths_to_dirs[x], paths_to_files[x]))
 
 st = os.stat('pipelinerun')
 os.chmod('pipelinerun', st.st_mode | 0111)

@@ -5,6 +5,7 @@ from astropy.io import fits
 import GetGalaxyList
 reload(GetGalaxyList)
 
+
 current_dir = os.getcwd()
 
 names = GetGalaxyList.return_galaxy_list()
@@ -32,7 +33,7 @@ rows = 5
 # Create figure
 fig = plt.figure(10, figsize=(cols*6, rows*6), dpi=200)
 
-spacing = 0.35
+spacing = 0.0
 
 x_size = (1. - spacing)/cols
 y_size = (1. - spacing)/rows
@@ -65,16 +66,38 @@ for z in range(len(sorted_names)):
 
     imgname = '%s.cutout.pbcor.fits' % sorted_names[z]
 
+    with open('text/center_HST.txt', 'r') as f_center:
+        lines = f_center.readlines()
+        HST_ra = float(lines[0])
+        HST_dec = float(lines[1])
+    with open('text/stdev.txt', 'r') as f_rms:
+	rms = float(f_rms.readline())
+
     f = aplpy.FITSFigure(HST_name, figure=fig, subplot=[x, y, x_size, y_size])
 
     f.show_grayscale()
-    f.show_contour(imgname, alpha=.8, linewidths=0.5)
+    f.show_contour(imgname, levels=[(2.*rms), (3.*rms), (6*rms), (12*rms)], alpha=1, linewidths=4., colors='cyan')
+    f.recenter(HST_ra, HST_dec, width=15./3600, height=15./3600)
+ 
+    #f.add_scalebar(5./3600.)
+    #f.scalebar.show(5./3600.)
+    #f.scalebar.set_corner('bottom right')
+    #f.scalebar.set_label('5 arcseconds')
 
-    f.set_title('%s' % sorted_names[z], weight=weighting)
+    f.axis_labels.hide_y()
+    f.axis_labels.hide_x()
+    f.ticks.hide()
+    f.tick_labels.hide()
+
+    f.add_label(0.2, 0.9, ('%s' % sorted_names[z])[:5], relative=True, weight=weighting, color='orange', size=50)
+    f.set_theme('publication')
 
     os.chdir('..')
 
 os.chdir(current_dir)
-plt.savefig('HST_Stamps.png')
+plt.savefig('HST_Stamps.png', bbox_inches='tight', pad_inches=0)
 plt.clf()
+plt.close()
+plt.clf()
+plt.cla()
 plt.close()

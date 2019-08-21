@@ -1,9 +1,9 @@
 import os
 
-
+#
 def return_galaxy_list():
     data_path = '/lustre/aoc/students/gpetter/imaging'
-    flag_list = ['J090133.42', 'J094417.84']
+    flag_list = ['J090133.42']
 
     # Go to directory, get list of galaxies
     names = os.listdir(data_path)
@@ -23,6 +23,7 @@ def return_galaxy_list():
         sorted_names.append('J' + thing)
 
     for x in range(len(flag_list)):
-        sorted_names.remove(flag_list[x])
+	if flag_list[x] in sorted_names:
+        	sorted_names.remove(flag_list[x])
 
     return sorted_names

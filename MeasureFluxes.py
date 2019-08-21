@@ -16,6 +16,7 @@ from photutils import EllipticalAnnulus
 from photutils import CircularAnnulus
 from photutils import aperture_photometry
 from astropy.io import fits
+from astropy import wcs
 from astropy.coordinates import SkyCoord  # High-level coordinates
 from photutils import SkyCircularAperture
 from astropy.coordinates import ICRS, Galactic, FK4, FK5  # Low-level frames
@@ -29,10 +30,9 @@ reload(CalcSFRs)
 #############################################################################
 # parameters
 cell_size = 0.2  # arcsec/pixel
-aperture_size = 4  # arcsec (radius)
+aperture_size = 1.  # arcsec (radius)
 bkgd_subtract = False
 make_growth_curves = False
-source_find = False
 #############################################################################
 
 
@@ -74,7 +74,7 @@ def find_aperture_size(position, img):
 # Arguments: path to directory of pertinent galaxy
 # Returns: A flux, flux error, image RMS, number of pixels per beam, number of beams in aperture,
 # the maximum pixel in aperture, and the relative errors: flux/error, and max/rms.
-def photometry(gal_name):
+def photometry(gal_name, source_find):
 
     # open fits file as 2D array
     os.chdir(gal_name)
@@ -113,24 +113,44 @@ def photometry(gal_name):
     # If you don't know proper aperture size, let the function find the optimal one, create aperture object
     if make_growth_curves:
         aper_radius = find_aperture_size(positions, data)
-    apertures = CircularAperture(positions, r=5)
+    apertures = CircularAperture(positions, r=aper_radius)
 
     # make mask image where pixels outside aperture are zero, then find the maximum value in the aperture
     mask = apertures.to_mask(method='center')[0].to_image((201, 201))
     masked_data = np.multiply(data, mask)
     max_val_in_aperture = max(map(max, masked_data))
 
+    with open('text/stdev.txt', 'r') as f_rms:
+	rms = float(f_rms.readline())
 
-
+    # If we are allowing a search for the brightest pixel as center of gaussian fit, check that pixel is not noise spike by verifying it is 3 sigma above noise
+    # Otherwise, just set center to centroid of HST image
     if source_find:
+	if (max_val_in_aperture > 3.*rms):
+		print(gal_name)
+		# get coordinates of maximum point
+		y_max = np.where(data == max_val_in_aperture)[0][0]
+		x_max = np.where(data == max_val_in_aperture)[1][0]
+		print(x_max, y_max)
 
-        # get coordinates of maximum point
-        y_max = np.where(data == max_val_in_aperture)[0][0]
-        x_max = np.where(data == max_val_in_aperture)[1][0]
-        # print(x_max, y_max)
-        # print(x_max, y_max)
 
-        positions = [(x_max, y_max)]
+		positions = [(x_max, y_max)]
+		with open('text/center_radio.txt', 'w') as f_center:
+			f_center.write('%s\n' % x_max)
+			f_center.write('%s\n' % y_max)
+	else:
+		# Get sky coordinates of centroid of HST image
+		#hdu_hst = fits.open('%s_HST.fits' % gal_name[:5])
+		#w_hst = wcs.WCS(hdu_hst[0])
+		#trans_hst = w_hst.all_pix2world(1199., 1199., 0)
+		#ra_hst, dec_hst = trans_hst[0], trans_hst[1]
+
+		# Save centroid RA, Dec to file
+		with open('text/center_radio.txt', 'w') as f_center:
+		    f_center.write('%s\n' % 100)
+		    f_center.write('%s\n' % 100)
+
+		
     apertures = CircularAperture(positions, r=aper_radius)
 
     # Do background subtraction with an annulus if desired

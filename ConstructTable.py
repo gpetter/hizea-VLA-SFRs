@@ -8,7 +8,8 @@
 
 import os
 import numpy as np
-from astropy.table import Table
+from astropy.table import Table, Column
+from astropy.io import fits
 import CalcSFRs
 CalcSFRs = reload(CalcSFRs)
 import MeasureFluxes
@@ -19,6 +20,10 @@ import ReturnImfitPars
 reload(ReturnImfitPars)
 import GetGalaxyList
 reload(GetGalaxyList)
+import WISE
+reload(WISE)
+import Templates
+reload(Templates)
 
 #######################################################################
 # parameters
@@ -30,6 +35,8 @@ get_imfits = True
 
 # Name of data table containing source list with RAs, Decs, IR SFRs, etc. Might need to delete columns by hand prior
 table_name = 'VLAsample.csv'
+
+test_temps = True
 #######################################################################
 
 
@@ -76,15 +83,28 @@ for name in names:
     t['data'][idx] = True
 
     # Call photometry script, returning flux and error, as well as other parameters
-    flux_measured = MeasureFluxes.photometry(name)
+    flux_measured = MeasureFluxes.photometry(name, True)
 
     Flux = 0
     Flux_error = 0
+    img_rms = flux_measured[2]
 
     if sig_fig_toggle:
-        t['RMS'][idx] = '%f' % float(('%.' + '%sg' % 2) % float(flux_measured[2]))
+        t['RMS'][idx] = '%f' % float(('%.' + '%sg' % 2) % float(img_rms))
     else:
-        t['RMS'][idx] = flux_measured[2]
+        t['RMS'][idx] = img_rms
+
+
+    if test_temps:
+	    #short_name = name[:5]
+	    #wisefluxes = WISE.mag_to_flux(short_name)
+	    #twelve_lum = (CalcSFRs.calc_params(wisefluxes[0], 0, t['Z'][idx], 0)[0])/(10**7)
+	    #twent_lum = (CalcSFRs.calc_params(wisefluxes[1], 0, t['Z'][idx], 0)[0])/(10**7)
+	    Templates.test_templates(t['Z'][idx])
+
+
+
+
 
     # Retrieve parameters derived by imfit to compare to our estimates
     if get_imfits:
@@ -108,7 +128,7 @@ for name in names:
             else:
                 t['detect'][idx] = False
         except:
-            print('hi')
+            print('failed')
             os.chdir('..')
     else:
         # Set elements in table equal to results from photometry. Apply sig figs if desired
@@ -160,9 +180,9 @@ for name in names:
             f.write('%s' % 1)
         os.chdir('..')
 
-    # If galaxy is not detected, calculate a SFR and luminosity with 3x the flux error to give an upper limit
+    # If galaxy is not detected, calculate a SFR and luminosity with 3x the image rms to give an upper limit
     else:
-        params_measured = CalcSFRs.calc_params(3*Flux_error, Flux_error, t['Z'][idx], 0.001)
+        params_measured = CalcSFRs.calc_params(3*img_rms, img_rms, t['Z'][idx], 0.001)
         os.chdir(name)
         with open('text/detect.txt', 'w') as f:
             f.write('%s' % 0)
@@ -183,6 +203,8 @@ for name in names:
         t['21 cm SFR'][idx] = params_measured[2]
         t['21 cm SFR Error (stat.)'][idx] = params_measured[3]
 
+    
+
 
 
 # Filter table to contain only sources with associated data presently
@@ -191,6 +213,55 @@ t_data = t[np.where(t['data'])[0]]
 
 print(t_data)
 
-os.chdir('/users/gpetter/PycharmProjects/untitled')
+
+os.chdir('/users/gpetter/PycharmProjects/new')
 t_data.write('table.csv', format='csv', overwrite=True)
-#t_data['Name', 'Z', 'IR SFR', 'IR SFR Err', '21 cm Flux', '21 cm Flux Error', 'Luminosity', 'Luminosity Error (stat.)', '21 cm SFR', '21 cm SFR Error (stat.)', 'detect'].write('textable', format='aastex', overwrite=True)
+t_data['Name', 'Z', 'IR SFR', 'IR SFR Err', '21 cm Flux', '21 cm Flux Error', 'Luminosity', 'Luminosity Error (stat.)', '21 cm SFR', '21 cm SFR Error (stat.)'].write('textable', format='aastex', overwrite=True)
+
+
+GetGalaxyList.return_galaxy_list()
+
+t_obs = Table([t_data['Name']])
+
+c = np.zeros(len(t_obs))
+
+t_obs['rms'], t_obs['Bmaj'], t_obs['Bmin'], t_obs['PA'] = c, c, c, c
+
+t_obs['rms'].unit = 'uJy/beam'
+t_obs['Bmaj'].unit = 'arcsec'
+t_obs['Bmin'].unit = 'arcsec'
+t_obs['PA'].unit = 'deg'
+
+
+for name in names:
+	
+	os.chdir(name)
+	idx = np.where(t_obs['Name'] == name)[0]
+	with open('text/stdev.txt', 'r') as f:
+		std_dev = float(f.readline())  # Jy/beam
+
+	imgname = '%s.cutout.pbcor.fits' % name
+	hdu = fits.open(imgname)
+	bmaj = hdu[0].header['bmaj']
+	bmin = hdu[0].header['bmin']
+	angle = hdu[0].header['bpa']
+	
+	if sig_fig_toggle:
+		std_dev = round((std_dev*(10**6)), 1)
+		bmaj = round((bmaj*3600), 1)
+		bmin = round((bmin*3600), 1)
+		angle = round(angle, 1)		
+
+
+
+	t_obs['rms'][idx] = std_dev
+	t_obs['Bmaj'][idx] = bmaj
+	t_obs['Bmin'][idx] = bmin
+	t_obs['PA'][idx] = angle
+
+	os.chdir('..')
+	
+os.chdir('/users/gpetter/PycharmProjects/new')
+t_obs.write('obs_table.csv', format='csv', overwrite=True)
+t_obs.write('obs_tex', format='aastex', overwrite=True)
+	
