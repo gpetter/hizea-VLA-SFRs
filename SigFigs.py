@@ -1,3 +1,4 @@
+# Author: Grayson Petter
 import numpy as np
 
 
