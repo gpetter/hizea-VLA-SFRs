@@ -161,7 +161,8 @@ def plot_all_SFRs():
 
 
     # copy of bottom axis to show luminosities
-    ax3 = ax2.twinx().twiny()
+    tempax = ax2.twinx()
+    ax3 = tempax.twiny()
     # copies of top axis to show luminosities
     ax4 = ax.twinx()
     ax5 = ax.twiny()
@@ -170,10 +171,10 @@ def plot_all_SFRs():
 
     # Titles
     #plt.suptitle('Star Formation Rate Comparison', y=0.91)
-    fig.text(0.05, 0.5, '1.5 GHz SFR $(M_{\odot} yr^{-1})$', va='center', rotation='vertical', fontsize=18)
-    fig.text(0.97, 0.5, '1.5 GHz Luminosity (W Hz $^{-1}$)', va='center', rotation='vertical', fontsize=18)
-    ax2.set_xlabel('IR SFR $(M_{\odot} yr^{-1})$', fontsize=18)
-    ax5.set_xlabel('IR Luminosity (W)', fontsize=18)
+    fig.text(0.05, 0.5, '$\mathrm{SFR_{1.5 GHz} \ (M_{\odot} yr^{-1}})$', va='center', rotation='vertical', fontsize=18)
+    fig.text(0.97, 0.5, '$\mathrm{L_{1.5 GHz}}$ (W Hz $^{-1}$)', va='center', rotation='vertical', fontsize=18)
+    ax2.set_xlabel('$\mathrm{SFR_{IR}} \ (\mathrm{M}_{\odot} \mathrm{yr}^{-1})$', fontsize=18)
+    ax5.set_xlabel('$\mathrm{L_{IR}}$ (W)', fontsize=18)
 
     
 
@@ -184,7 +185,7 @@ def plot_all_SFRs():
     #ratio between radio luminosity (erg/s/Hz) and SFR. Multiplying SFR bounds by this number translates them to lumiosity bounds (W/Hz)
     radio_conversion = 1.123517708e21
 
-    low_sfr_lim = 1.
+    low_sfr_lim = 5.
 
 
 
@@ -229,8 +230,8 @@ def plot_all_SFRs():
 
     # Legend
     ax.legend((ok, flagged, non_detect, one_to_one_line[0], fixed_line[0], ir_lim_line),
-               ('Detections', 'AGN', 'Non-Detection Upper Limits', 'One to one',
-                'Factor 2.5 Suppressed', 'Proposed Detection Limit'), prop={'size': 8})
+               ('Detections', 'Radio AGN', '$3\sigma$ Upper Limits', '$\mathrm{SFR}_{\mathrm{IR}} = \mathrm{SFR}_{\mathrm{1.5 GHz}}$',
+                '$\mathrm{SFR}_{\mathrm{IR}} = 2.5*\mathrm{SFR}_{\mathrm{1.5 GHz}}$', 'Proposed Detection Limit'), prop={'size': 8})
 
 
     # Hack to make the diagonal hashes on broken axis
@@ -253,14 +254,11 @@ def plot_all_SFRs():
     ax4.tick_params(axis='x', which='both', bottom=False)
     ax5.tick_params(axis='x', which='both', bottom=False)
     ax2.spines['top'].set_visible(False)
-    ax2.spines['right'].set_visible(False)
     ax3.spines['top'].set_visible(False)
-    ax3.spines['right'].set_visible(False)
     ax3.get_xaxis().set_visible(False)
-    ax3.axis('off')
-    ax3.set_frame_on(False)
+    tempax.spines['top'].set_visible(False)
+
     ax3.axes.get_xaxis().set_visible(False)
-    ax3.axes.get_yaxis().set_visible(False)
 
     #ax.xaxis.tick_top()
     #ax.tick_params(labeltop='off')  # don't put tick labels at the top
@@ -295,7 +293,7 @@ def plot_all_SFRs():
             ax2.annotate((non_names[x].split('.')[0])[:5], (ir_non_detect[x], radio_non[x]), xytext=(0, 2), textcoords='offset points',
                          ha='right', va='bottom')
 
-    plt.savefig('SFR_all_plot.png', overwrite=True, bbox_inches='tight', pad_inches=0)
+    plt.savefig('SFR_all_plot.png', overwrite=True, bbox_inches='tight')
     plt.clf()
     plt.cla()
     plt.close()
@@ -453,21 +451,22 @@ def lum_v_speed():
 
 
 def plot_lum_vs_z():
+    es_to_W = 10**7
 
-    lum_ok = np.array(t_ok['Luminosity'])
-    lum_uncertainty_ok = np.array(t_ok['Luminosity Error (stat.)'])
+    lum_ok = np.array(t_ok['Luminosity'])/es_to_W
+    lum_uncertainty_ok = np.array(t_ok['Luminosity Error (stat.)'])/es_to_W
     z_ok = np.array(t_ok['Z'])
     z_uncertainty_ok = 0
     names_ok = t_ok['Name']
 
-    lum_bad = np.array(t_bad['Luminosity'])
-    lum_uncertainty_bad = np.array(t_bad['Luminosity Error (stat.)'])
+    lum_bad = np.array(t_bad['Luminosity'])/es_to_W
+    lum_uncertainty_bad = np.array(t_bad['Luminosity Error (stat.)'])/es_to_W
     z_bad = np.array(t_bad['Z'])
     z_uncertainty_bad = 0
     names_bad = t_bad['Name']
 
-    lum_non = np.array(t_nondetect['Luminosity'])
-    lum_uncertainty_non = np.array(t_nondetect['Luminosity Error (stat.)'])
+    lum_non = np.array(t_nondetect['Luminosity'])/es_to_W
+    lum_uncertainty_non = np.array(t_nondetect['Luminosity Error (stat.)'])/es_to_W
     z_non = np.array(t_nondetect['Z'])
     z_uncertainty_non = 0
     names_non = t_nondetect['Name']
@@ -484,10 +483,10 @@ def plot_lum_vs_z():
     ax.legend((ok, bad, non), ('Detections', 'AGN', 'Non-Detection Upper Limits'))
 
     #plt.suptitle('Luminosity vs. Redshift', y=0.92)
-    fig.text(0.05, 0.5, '1.5 GHz Luminosity (erg s$^{-1}$ Hz$^{-1}$)', va='center', rotation='vertical', fontsize=18)
+    fig.text(0.05, 0.5, '$\mathrm{L_{1.5GHz}} \ (\mathrm{W \ Hz}^{-1}$)', va='center', rotation='vertical', fontsize=18)
 
     plt.yscale('log')
-    plt.xlabel('Redshift', fontsize=18)
+    plt.xlabel('$z$', fontsize=18)
 
     # Hack to make the diagonal hashes on broken axis
     d = .015  # how big to make the diagonal lines in axes coordinates
@@ -507,6 +506,8 @@ def plot_lum_vs_z():
     ax.xaxis.tick_top()
     ax.tick_params(labeltop='off')  # don't put tick labels at the top
     ax2.xaxis.tick_bottom()
+
+    ax.yaxis.set_major_formatter(plt.ScalarFormatter(useMathText=True))
 
 
     if label_points:
@@ -605,9 +606,10 @@ def Lum_hist():
 	plt.close()
 	colors = ['b', 'gold']
 	fig = plt.hist([lums_ok, lums_non], bins=20, stacked=True, label='colors')
-	plt.xlabel('1.5 GHz Luminosity (W Hz $^{-1}$)', fontsize=18)
+	plt.gca().xaxis.set_major_formatter(plt.ScalarFormatter(useMathText=True))
+	plt.xlabel('$\mathrm{L_{1.5 GHz} \ (W \ Hz}^{-1}$)', fontsize=18)
 	plt.ylabel('Counts', fontsize=18)
-	plt.savefig('lum_hist.png', overwrite=True)
+	plt.savefig('lum_hist.png', overwrite=True, bbox_inches='tight', dpi=300)
 	plt.clf()
 	plt.close()
 	plt.clf()
