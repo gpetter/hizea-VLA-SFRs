@@ -104,6 +104,8 @@ def plot_all_SFRs():
     # Making arrays of SFRs and uncertainties for non-AGN detections
     irsfrok = np.array(t_ok['IR SFR']).astype(float)
     irok_uncertainty = np.array(t_ok['IR SFR Err'])
+    ##############################
+    irok_syst = np.array(t_ok['IR Error syst.'])*irsfrok
     radiosfr_ok = np.array(t_ok['21 cm SFR']).astype(float)
     sfr_ok_uncertainty = np.array(t_ok['21 cm SFR Error (stat.)']).astype(float)
     names = t_ok['Name']
@@ -112,6 +114,8 @@ def plot_all_SFRs():
     # for AGN (one deviant galaxy)
     flagIRSFR = np.array(t_bad['IR SFR'])
     flagIR_uncertainty = np.array(t_bad['IR SFR Err'])
+    ##################
+    flagIR_syst = np.array(t_bad['IR Error syst.'])*flagIRSFR
     flagRadioSFR = np.array(t_bad['21 cm SFR'])
     flag_SFR_uncertainty = np.array(t_bad['21 cm SFR Error (stat.)'])
     flagnames = t_bad['Name']
@@ -119,6 +123,8 @@ def plot_all_SFRs():
     # and for non-detections
     ir_non_detect = np.array(t_nondetect['IR SFR'])
     ir_non_unc = np.array(t_nondetect['IR SFR Err'])
+    ##################
+    ir_non_syst = np.array(t_nondetect['IR Error syst.'])*ir_non_detect
     radio_non = np.array(t_nondetect['21 cm SFR'])
     radio_non_unc = np.array(t_nondetect['21 cm SFR Error (stat.)'])
     non_names = t_nondetect['Name']
@@ -140,10 +146,11 @@ def plot_all_SFRs():
     # Plot all data with different markers. For non-detections, make y-axis upper-limit arrows. For sources below
     # proposed detection limit, make x-axis upper limit arrows.
     ok = ax2.errorbar(irsfrok, radiosfr_ok, yerr=sfr_ok_uncertainty, xerr=irok_uncertainty, fmt='o', ecolor='k', markeredgecolor='b', markerfacecolor='b', capsize=2, ms=marker_size)
-    flagged = ax.errorbar(flagIRSFR, flagRadioSFR, yerr=flag_SFR_uncertainty, xerr=flagIR_uncertainty, fmt='o',
-                           ecolor='k', c='r', capsize=2, marker='x', ms=marker_size)
-    non_detect = ax2.errorbar(ir_non_detect, radio_non, yerr=2 * radio_non / 10, xerr=ir_non_unc, fmt='o',
-                              ecolor='k', c='gold', capsize=2, uplims=True, marker='v', ms=marker_size)
+    ok_syst = ax2.errorbar(irsfrok, radiosfr_ok, yerr=0, xerr=irok_syst, fmt='none', ecolor='c')
+    flagged = ax.errorbar(flagIRSFR, flagRadioSFR, yerr=flag_SFR_uncertainty, xerr=flagIR_uncertainty, fmt='o', ecolor='k', c='r', capsize=2, marker='x', ms=marker_size)
+    flagged_syst = ax.errorbar(flagIRSFR, flagRadioSFR, yerr=0, xerr=flagIR_syst, fmt='none', ecolor='c')
+    non_detect = ax2.errorbar(ir_non_detect, radio_non, yerr=2 * radio_non / 10, xerr=ir_non_unc, fmt='o', ecolor='k', c='gold', capsize=2, uplims=True, marker='v', ms=marker_size)
+    non_detect_syst = ax2.errorbar(ir_non_detect, radio_non, yerr=0, xerr=ir_non_syst, fmt='none', ecolor='c')
 
 
 
@@ -231,7 +238,7 @@ def plot_all_SFRs():
     # Legend
     ax.legend((ok, flagged, non_detect, one_to_one_line[0], fixed_line[0], ir_lim_line),
                ('Detections', 'Radio AGN', '$3\sigma$ Upper Limits', '$\mathrm{SFR}_{\mathrm{IR}} = \mathrm{SFR}_{\mathrm{1.5 GHz}}$',
-                '$\mathrm{SFR}_{\mathrm{IR}} = 2.5*\mathrm{SFR}_{\mathrm{1.5 GHz}}$', 'Proposed Detection Limit'), prop={'size': 8})
+                r'$\mathrm{SFR}_{\mathrm{IR}} = 2.5 \times \mathrm{SFR}_{\mathrm{1.5 GHz}}$', 'Proposed Detection Limit'), prop={'size': 8})
 
 
     # Hack to make the diagonal hashes on broken axis
@@ -416,14 +423,13 @@ def lum_v_speed():
 
     non = plt.errorbar(SFR_non, v_non, xerr=SFR_non/5, yerr=v_uncertainty_non, fmt='o', ecolor='k', capsize=2, c='gold', xuplims=True, marker='<', ms=marker_size)
 
-    fig.legend((ok, non), ('Detections', 'Non-Detection Upper Limits'))
+    fig.legend((ok, non), ('Detections', '$3\sigma$ Upper Limits'))
 
-    #plt.suptitle('Luminosity vs. Wind Speed', y=0.92)
-    #fig.text(0.5, 0.05, '1.5 GHz Luminosity (erg s$^{-1}$ Hz$^{-1}$)', va='center', rotation='horizontal', fontsize=18)
+    
 
     plt.yscale('log')
     plt.ylabel('Outflow Velocity (km s$^{-1}$)', fontsize=18)
-    plt.xlabel('log(1.5 GHz SFR) ($M_{\odot} yr^{-1}$)', fontsize=18)
+    plt.xlabel('log(1.5 GHz SFR) ($\mathrm{M_{\odot} yr}^{-1}$)', fontsize=18)
 
    
 
@@ -436,7 +442,7 @@ def lum_v_speed():
         for x in range(len(SFR_non)):
             plt.annotate((names_non[x].split('.')[0])[:5], (v_non[x], SFR_non[x]), xytext=(0, 2), textcoords='offset points',
                          ha='right', va='bottom')
-    plt.savefig('lum_vs_speed.png', overwrite=True, bbox_inches='tight')
+    plt.savefig('lum_vs_speed.png', overwrite=True, bbox_inches='tight', dpi=300)
     plt.clf()
     plt.cla()
     plt.close()
@@ -480,7 +486,7 @@ def plot_lum_vs_z():
     non = ax2.errorbar(z_non, lum_non, yerr=lum_non/5, xerr=z_uncertainty_non,
                        fmt='o', ecolor='k', capsize=2, c='gold', uplims=True, marker='v', ms=marker_size)
 
-    ax.legend((ok, bad, non), ('Detections', 'AGN', 'Non-Detection Upper Limits'))
+    ax.legend((ok, bad, non), ('Detections', 'Radio AGN', '$3\sigma$ Upper Limits'))
 
     #plt.suptitle('Luminosity vs. Redshift', y=0.92)
     fig.text(0.05, 0.5, '$\mathrm{L_{1.5GHz}} \ (\mathrm{W \ Hz}^{-1}$)', va='center', rotation='vertical', fontsize=18)

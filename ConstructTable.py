@@ -20,8 +20,8 @@ import ReturnImfitPars
 reload(ReturnImfitPars)
 import GetGalaxyList
 reload(GetGalaxyList)
-import WISE
-reload(WISE)
+#import WISE
+#reload(WISE)
 import Templates
 reload(Templates)
 
@@ -39,6 +39,7 @@ table_name = 'VLAsample.csv'
 test_temps = True
 #######################################################################
 
+start_dir = os.getcwd()
 
 # Read in data table given to me by collaboration
 t = Table.read(table_name)
@@ -48,7 +49,7 @@ a = np.empty(len(t))
 a[:] = np.nan
 b = np.zeros(len(t))
 t['data'], t['21 cm Flux'], t['21 cm Flux Error'], t['Luminosity'], t['Luminosity Error (stat.)'], \
-t['21 cm SFR'], t['21 cm SFR Error (stat.)'],  t['RMS'] = b, a, a, a, a, a, a, a
+t['21 cm SFR'], t['21 cm SFR Error (stat.)'],  t['RMS'], t['IR Error syst.'] = b, a, a, a, a, a, a, a, a
 
 # Optional toggle to retrieve data from imfit logs
 if get_imfits:
@@ -64,6 +65,7 @@ else:
 t['RA (J2000)'].unit = 'deg'
 t['Dec (J2000)'].unit = 'deg'
 t['IR SFR'].unit = 'solMass/yr'
+t['IR Luminosity'].unit = 'solLum'
 t['21 cm Flux'].unit = 'Jy'
 t['21 cm Flux Error'].unit = 'Jy'
 t['Luminosity'].unit = 'erg/(s*Hz)'
@@ -78,9 +80,20 @@ names = GetGalaxyList.return_galaxy_list()
 # Go to each galaxy, call photometry and calculate SFRs scripts, and add the outputs to the table
 for name in names:
 
+    
+
     # If the name exists in my directory, set data flag to true, get index in table
     idx = np.where(t['Name'] == name)[0]
     t['data'][idx] = True
+
+
+    if test_temps:
+	    #short_name = name[:5]
+	    #wisefluxes = WISE.mag_to_flux(short_name)
+	    #twelve_lum = (CalcSFRs.calc_params(wisefluxes[0], 0, t['Z'][idx], 0)[0])/(10**7)
+	    #twent_lum = (CalcSFRs.calc_params(wisefluxes[1], 0, t['Z'][idx], 0)[0])/(10**7)
+	    lum_syst = Templates.test_templates(t['Z'][idx])
+	    t['IR Error syst.'][idx] = lum_syst
 
     # Call photometry script, returning flux and error, as well as other parameters
     flux_measured = MeasureFluxes.photometry(name, True)
@@ -94,13 +107,7 @@ for name in names:
     else:
         t['RMS'][idx] = img_rms
 
-
-    if test_temps:
-	    #short_name = name[:5]
-	    #wisefluxes = WISE.mag_to_flux(short_name)
-	    #twelve_lum = (CalcSFRs.calc_params(wisefluxes[0], 0, t['Z'][idx], 0)[0])/(10**7)
-	    #twent_lum = (CalcSFRs.calc_params(wisefluxes[1], 0, t['Z'][idx], 0)[0])/(10**7)
-	    Templates.test_templates(t['Z'][idx])
+    
 
 
 
@@ -211,15 +218,14 @@ for name in names:
 t_data = t[np.where(t['data'])[0]]
 
 
-print(t_data)
+print(t_data['Name', 'Z', 'IR SFR', 'IR SFR Err', '21 cm Flux', '21 cm Flux Error', 'Luminosity', 'Luminosity Error (stat.)', '21 cm SFR', '21 cm SFR Error (stat.)'])
 
 
-os.chdir('/users/gpetter/PycharmProjects/new')
+os.chdir(start_dir)
 t_data.write('table.csv', format='csv', overwrite=True)
 t_data['Name', 'Z', 'IR SFR', 'IR SFR Err', '21 cm Flux', '21 cm Flux Error', 'Luminosity', 'Luminosity Error (stat.)', '21 cm SFR', '21 cm SFR Error (stat.)'].write('textable', format='aastex', overwrite=True)
 
-
-GetGalaxyList.return_galaxy_list()
+names = GetGalaxyList.return_galaxy_list()
 
 t_obs = Table([t_data['Name']])
 
@@ -261,7 +267,7 @@ for name in names:
 
 	os.chdir('..')
 	
-os.chdir('/users/gpetter/PycharmProjects/new')
+os.chdir(start_dir)
 t_obs.write('obs_table.csv', format='csv', overwrite=True)
 t_obs.write('obs_tex', format='aastex', overwrite=True)
 	

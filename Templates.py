@@ -17,25 +17,35 @@ import glob
 
 c = 299792458.
 
-# bins of 1 GHz
-d_nu = 1000000000.
+# bins of 100 GHz
+d_nu = 100000000000.
 
 
-templates = glob.glob('Comprehensive_library/*.txt')
+templates = glob.glob('/Users/graysonpetter/Desktop/Dartmouth/HIZEA/hizea-VLA-SFRs/Comprehensive_library/SFG*.txt')
+templates.extend(glob.glob('/Users/graysonpetter/Desktop/Dartmouth/HIZEA/hizea-VLA-SFRs/Comprehensive_library/Comp*.txt'))
 
 
 
-
+# take in a template and redshift every wavelength
 def redshift_spectrum(z, template):
 
 	t = pd.read_csv(template, sep='   ', engine='python')
 	t.columns = ['lambda_e', 'L', 'dL']
-
+	
 	wavelengths = np.array(t.iloc[:, 0])
 	Lums = np.array(t.iloc[:, 1])
 
-	shifted_len = []
-	shifted_Lum = []
+	# cut template down to 8-1000 microns
+	spec_range = np.where((wavelengths >= 8.) & (wavelengths <= 1000.))[0]
+	wavelengths = wavelengths[spec_range]
+	Lums = Lums[spec_range]
+
+	# get luminosity at 12 & 22 micron
+	twelve_mu = (np.abs(wavelengths - 12)).argmin()
+	twenty_two_mu = (np.abs(wavelengths -22)).argmin()
+
+	
+	shifted_len, shifted_Lum = [], []
 
 	for y_emit in wavelengths:
 		shifted_len.append(float(y_emit)*(1+z))
@@ -43,11 +53,11 @@ def redshift_spectrum(z, template):
 		#shifted_Lum.append(float(l_emit)/(1+z))
 	shifted_len = np.array(shifted_len)
 	#shifted_Lum = np.array(shifted_Lum)
-	twelve_mu = (np.abs(shifted_len - 12)).argmin()
-	twenty_two_mu = (np.abs(shifted_len -22)).argmin()
+	
+	
 
 	return(shifted_len, Lums, Lums[twelve_mu], Lums[twenty_two_mu])
-
+	#return(wavelengths, Lums, Lums[twelve_mu], Lums[twenty_two_mu])
 
 
 def interpolate_spec(shifted_spec):
@@ -56,7 +66,7 @@ def interpolate_spec(shifted_spec):
 	nus = (10**6)*c/(shifted_spec[0])
 
 	# reverse lists so frequencies go from low to high for convenience
-	reversed_nus = np.flipud(nus)
+	reversed_nus = np.flipud(nus).flatten()
 	reversed_lums = np.flipud(shifted_spec[1])
 
 	# find smallest factor of d_nu Hz greater than the smallest frequency in the list
@@ -92,7 +102,6 @@ def integrate_spectrum(freqs, Ls):
 
 		tot_ir = tot_ir + (rect+tri)
 
-
 	return(tot_ir)
 
 def test_templates(zz):
@@ -105,10 +114,15 @@ def test_templates(zz):
 		interped_spectrum = interpolate_spec(shifted_spectrum)
 		total_ir = integrate_spectrum(interped_spectrum[0], interped_spectrum[1])
 		ratio_list.append(total_ir/twenty_two_lum)
-	ratio_list = np.array(ratio_list)
+		#print(templates[x])
+		#print(total_ir)
+		
+	#ratio_list = np.log10(np.array(ratio_list))
+	ratio_list = (np.array(ratio_list))
+	averg = np.mean(ratio_list)
 	stdev = np.std(ratio_list)
-	range_ratios = np.ptp(ratio_list)
-	print(stdev, range_ratios)
+	#range_ratios = np.ptp(ratio_list)
+	return(stdev/averg)
 
 
 

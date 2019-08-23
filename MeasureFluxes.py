@@ -127,11 +127,11 @@ def photometry(gal_name, source_find):
     # Otherwise, just set center to centroid of HST image
     if source_find:
 	if (max_val_in_aperture > 3.*rms):
-		print(gal_name)
+		#print(gal_name)
 		# get coordinates of maximum point
 		y_max = np.where(data == max_val_in_aperture)[0][0]
 		x_max = np.where(data == max_val_in_aperture)[1][0]
-		print(x_max, y_max)
+		#print(x_max, y_max)
 
 
 		positions = [(x_max, y_max)]
