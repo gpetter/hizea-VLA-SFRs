@@ -11,7 +11,7 @@ def return_galaxy_list():
     sorted_names = sorted([f for f in os.listdir(data_path) if not f.startswith('.')], key=lambda f: f.lower())
 
     for x in range(len(flag_list)):
-	if flag_list[x] in sorted_names:
-        	sorted_names.remove(flag_list[x])
+        if flag_list[x] in sorted_names:
+            sorted_names.remove(flag_list[x])
 
     return sorted_names

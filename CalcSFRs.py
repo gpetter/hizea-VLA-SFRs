@@ -9,6 +9,12 @@
 import numpy as np
 from sympy import *
 
+allowthermal = True
+
+
+def tabatabaei(nu, al, z):
+    thermal_frac = 1./(1.+13.*((nu*(1+z)) ** (0.1 + al)))
+    return(thermal_frac)
 
 # Calculate a luminosity, star formation rate, and uncertainties given a flux density
 # Using equation relating synchrotron emission to star formation rate given in Murphy et. al (2011)
@@ -16,23 +22,16 @@ from sympy import *
 def calc_params(flux, flux_error, redshift, redshift_error):
 
     # Defining symbols (sympy)
-
-    # redshift
-    z = Symbol('z')
-    # redshift uncertainty
-    zunc = Symbol('zunc')
-    # frequency
-    nu = Symbol('nu')
-    nuunc = Symbol('nuunc')
-    # alpha value
-    al = Symbol('al')
-    alunc = Symbol('alunc')
-    # flux
-    f = Symbol('f')
-    f_unc = Symbol('f_unc')
-    # Hubble constant
-    Ho = Symbol('Ho')
-    Ho_unc = Symbol('Ho_unc')
+    z = Symbol('z')     # redshift
+    zunc = Symbol('zunc')   # redshift uncertainty
+    nu = Symbol('nu')   # frequency
+    nuunc = Symbol('nuunc')     # frequency uncertainty
+    al = Symbol('al')   # non-thermal spectral index alpha
+    alunc = Symbol('alunc')     # alpha uncertainty
+    f = Symbol('f')     # flux
+    f_unc = Symbol('f_unc')     # flux uncertainty
+    Ho = Symbol('Ho')   # hubble constant
+    Ho_unc = Symbol('Ho_unc')   # hubble uncertainty
 
     # define speed of light and Hubble distance
     c = 299792.458  # km/s
@@ -42,6 +41,7 @@ def calc_params(flux, flux_error, redshift, redshift_error):
     # convenience definition from Murphy et al. paper
     a = 1/(1+z)
     # Comoving distance formula
+    # 3E24 factor converts between cm and Mpc
     Dc = (Dho/(a/(1-a)+0.2278+0.2070*(1-a)/(0.785+a)-0.0158*(1-a)/((0.312+a)**2)))*3.08567758128*(10**24)  # cm
     # luminosity distance formula
     Dl = (1+z)*Dc  # cm
@@ -50,56 +50,50 @@ def calc_params(flux, flux_error, redshift, redshift_error):
     # inverse square law to get luminosity
     Lumform =(4*np.pi*f*(10**-23)*Dl_nu**2)  # ergs/s
     # SFR formula in solar masses/yr (Murphy et. al)
-    SFRform = (6.64e-29*(nu**(-al))*Lumform)
+    kroupa_to_salpeter = 1.5
+    #SFRform = kroupa_to_salpeter*(6.64e-29*(nu**(-al))*Lumform)
+    if allowthermal:
+        L_NT = Lumform/(1+1/13.*((1+z)*nu)**(-0.1-al))
+        SFRform = 6.64e-29 * (nu ** (-al)) * L_NT
+    else:
+        SFRform = 6.64e-29 * (nu ** (-al)) * Lumform
     # luminosity uncertainty formula - simple error propagation
     Lum_stat_unc = ((diff(Lumform, f)*f_unc)**2)**0.5
-
     Lum_syst_unc = ((diff(Lumform, z)*zunc)**2+(diff(Lumform, Ho)*Ho_unc)**2)**0.5
     # SFR uncertainty formula
     SFR_stat_uncertainty = ((diff(SFRform, f)*f_unc)**2)**.5
     SFR_syst_uncertainty = ((diff(SFRform, z) * zunc) ** 2 + (diff(SFRform, Ho) * Ho_unc)**2 + (diff(SFRform, al) * alunc)**2) ** .5
 
     # Define constants
-    Hubble = 70
+    Hubble = 70     # km/s/Mpc
     Hubble_unc = 2
     freqs = 1.51976491105  # GHz
     freqsigs = 0
-    alphas = -0.7
+    alphas = -0.8
     alphasig = 0.05
 
     output = []
 
+    # substitute in values into symbolic expressions
+    # SFR values
     SF = SFRform.subs({nu: freqs, al: alphas, f: flux, z: redshift, Ho: Hubble})
-
     SF_stat = SFR_stat_uncertainty.subs({nu: freqs, al: alphas, f: flux, z: redshift,
                                             f_unc: flux_error, Ho: Hubble})
     SF_syst = SFR_syst_uncertainty.subs({nu: freqs, al: alphas, f: flux, z: redshift, zunc: redshift_error,
                                          alunc: alphasig, f_unc: flux_error, Ho: Hubble, Ho_unc: Hubble_unc})
-
-
-
+    # luminosity values
     Lum = Lumform.subs({f: flux, z: redshift, al: alphas, Ho: Hubble})
     Lum_stat = Lum_stat_unc.subs({f: flux, z: redshift, f_unc: flux_error, Ho: Hubble, al: alphas})
     Lum_syst = Lum_syst_unc.subs({f: flux, z: redshift, f_unc: flux_error, zunc: redshift_error,
                                   Ho: Hubble, Ho_unc: Hubble_unc})
 
-
-    # substitute values in from arguments to calculate
     output.append(Lum)
     output.append(Lum_stat)
     output.append(SF)
     output.append(SF_stat)
-    #output.append(SF_syst)
 
     return output
 
-def from_lum(lumin):
-    # Define constants
-    freqs = 1.51976491105  # GHz
-    alphas = -0.7
 
-    SFR = (6.64e-29*(freqs**(-alphas))*lumin)
-
-    return SFR
 
 

@@ -41,33 +41,33 @@ make_growth_curves = False
 # The optimal aperture size is then returned so the photometry() function can use it.
 def find_aperture_size(position, img):
 
-    # list of aperture radii in arcsec
-    ap_rad_list = np.arange(0.1, 20, 0.1)
-    rad_pix = ap_rad_list/cell_size
-    f = []
+	# list of aperture radii in arcsec
+	ap_rad_list = np.arange(0.1, 20, 0.1)
+	rad_pix = ap_rad_list/cell_size
+	f = []
 
-    # Do photometry with each aperture
-    for x in range(len(ap_rad_list)):
-        ap = CircularAperture(position, r=rad_pix[x])
-        phot = aperture_photometry(img, ap)
-        f.append(phot['aperture_sum'][0])
+	# Do photometry with each aperture
+	for x in range(len(ap_rad_list)):
+		ap = CircularAperture(position, r=rad_pix[x])
+		phot = aperture_photometry(img, ap)
+		f.append(phot['aperture_sum'][0])
 
-    # Make curve of growth plot
-    plt.figure(randint(0, 10000))
-    plt.plot(ap_rad_list, f, 'ro')
-    plt.xlabel('Aperture radius (")')
-    plt.ylabel('Flux Density * pixels per beam')
-    plt.savefig('curveofgrowth.png', overwrite=True)
-    plt.clf()
-    plt.close()
+	# Make curve of growth plot
+	plt.figure(randint(0, 10000))
+	plt.plot(ap_rad_list, f, 'ro')
+	plt.xlabel('Aperture radius (")')
+	plt.ylabel('Flux Density * pixels per beam')
+	plt.savefig('curveofgrowth.png', overwrite=True)
+	plt.clf()
+	plt.close()
 
-    # Select aperture at which it first reaches 90% of maximum (can tweak this).
-    maximum = max(f)
-    idxs = np.where(f > 0.9 * maximum)[0]
-    if len(idxs) > 0:
-        return rad_pix[min(idxs)]
-    else:
-        return 10
+	# Select aperture at which it first reaches 90% of maximum (can tweak this).
+	maximum = max(f)
+	idxs = np.where(f > 0.9 * maximum)[0]
+	if len(idxs) > 0:
+		return rad_pix[min(idxs)]
+	else:
+		return 10
 
 
 # Do photometry with a circular aperture
@@ -76,117 +76,117 @@ def find_aperture_size(position, img):
 # the maximum pixel in aperture, and the relative errors: flux/error, and max/rms.
 def photometry(gal_name, source_find):
 
-    # open fits file as 2D array
-    os.chdir(gal_name)
-    fits_name = '%s.cutout.pbcor.fits' % gal_name
-    hdu = fits.open(fits_name)
-    data = hdu[0].data[0][0]
+	# open fits file as 2D array
+	os.chdir(gal_name)
+	fits_name = '%s.cutout.pbcor.fits' % gal_name
+	hdu = fits.open(fits_name)
+	data = hdu[0].data[0][0]
 
-    # open text file containing the scaled MAD and beam area saved by generate_cleans.statistics()
-    with open('text/stdev.txt', 'r') as f:
-        std_dev = float(f.readline())  # Jy/beam
-    with open('text/beamarea.txt', 'r') as f:
-        beamarea = float(f.readline())  # arcsec^2
+	# open text file containing the scaled MAD and beam area saved by generate_cleans.statistics()
+	with open('text/stdev.txt', 'r') as f:
+		std_dev = float(f.readline())  # Jy/beam
+	with open('text/beamarea.txt', 'r') as f:
+		beamarea = float(f.readline())  # arcsec^2
 
-    # create error image to pass to astropy photometry to calculate flux errors
-    ones = np.ones_like(data)
-    error_image = std_dev*ones
+	# create error image to pass to astropy photometry to calculate flux errors
+	ones = np.ones_like(data)
+	error_image = std_dev*ones
 
-    # Flux density = Sum of pixels in aperture / number of pixels per beam
-    # Pixels per beam = angular area of beam / angular area of one pixel
-    pix_per_beam = beamarea/(cell_size**2)
+	# Flux density = Sum of pixels in aperture / number of pixels per beam
+	# Pixels per beam = angular area of beam / angular area of one pixel
+	pix_per_beam = beamarea/(cell_size**2)
 
-    # aperture radius in pixels
-    aper_radius = aperture_size/cell_size
+	# aperture radius in pixels
+	aper_radius = aperture_size/cell_size
 
-    # number of beams in the aperture
-    beams_per_aper = np.pi*aperture_size**2/beamarea
+	# number of beams in the aperture
+	beams_per_aper = np.pi*aperture_size**2/beamarea
 
-    # flux error calculation
-    flux_error = np.sqrt(beams_per_aper)*std_dev/2
-
-
-
-    # center of image
-    positions = [(100, 100)]
-
-    # If you don't know proper aperture size, let the function find the optimal one, create aperture object
-    if make_growth_curves:
-        aper_radius = find_aperture_size(positions, data)
-    apertures = CircularAperture(positions, r=aper_radius)
-
-    # make mask image where pixels outside aperture are zero, then find the maximum value in the aperture
-    mask = apertures.to_mask(method='center')[0].to_image((201, 201))
-    masked_data = np.multiply(data, mask)
-    max_val_in_aperture = max(map(max, masked_data))
-
-    with open('text/stdev.txt', 'r') as f_rms:
-	rms = float(f_rms.readline())
-
-    # If we are allowing a search for the brightest pixel as center of gaussian fit, check that pixel is not noise spike by verifying it is 3 sigma above noise
-    # Otherwise, just set center to centroid of HST image
-    if source_find:
-	if (max_val_in_aperture > 3.*rms):
-		#print(gal_name)
-		# get coordinates of maximum point
-		y_max = np.where(data == max_val_in_aperture)[0][0]
-		x_max = np.where(data == max_val_in_aperture)[1][0]
-		#print(x_max, y_max)
+	# flux error calculation
+	flux_error = np.sqrt(beams_per_aper)*std_dev/2
 
 
-		positions = [(x_max, y_max)]
-		with open('text/center_radio.txt', 'w') as f_center:
-			f_center.write('%s\n' % x_max)
-			f_center.write('%s\n' % y_max)
+
+	# center of image
+	positions = [(100, 100)]
+
+	# If you don't know proper aperture size, let the function find the optimal one, create aperture object
+	if make_growth_curves:
+		aper_radius = find_aperture_size(positions, data)
+	apertures = CircularAperture(positions, r=aper_radius)
+
+	# make mask image where pixels outside aperture are zero, then find the maximum value in the aperture
+	mask = apertures.to_mask(method='center')[0].to_image((201, 201))
+	masked_data = np.multiply(data, mask)
+	max_val_in_aperture = max(map(max, masked_data))
+
+	with open('text/stdev.txt', 'r') as f_rms:
+		rms = float(f_rms.readline())
+
+	# If we are allowing a search for the brightest pixel as center of gaussian fit, check that pixel is not noise spike by verifying it is 3 sigma above noise
+	# Otherwise, just set center to centroid of HST image
+	if source_find:
+		if (max_val_in_aperture > 3.*rms):
+			#print(gal_name)
+			# get coordinates of maximum point
+			y_max = np.where(data == max_val_in_aperture)[0][0]
+			x_max = np.where(data == max_val_in_aperture)[1][0]
+			#print(x_max, y_max)
+
+
+			positions = [(x_max, y_max)]
+			with open('text/center_radio.txt', 'w') as f_center:
+				f_center.write('%s\n' % x_max)
+				f_center.write('%s\n' % y_max)
+		else:
+			# Get sky coordinates of centroid of HST image
+			#hdu_hst = fits.open('%s_HST.fits' % gal_name[:5])
+			#w_hst = wcs.WCS(hdu_hst[0])
+			#trans_hst = w_hst.all_pix2world(1199., 1199., 0)
+			#ra_hst, dec_hst = trans_hst[0], trans_hst[1]
+
+			# Save centroid RA, Dec to file
+			with open('text/center_radio.txt', 'w') as f_center:
+				f_center.write('%s\n' % 100)
+				f_center.write('%s\n' % 100)
+
+
+	apertures = CircularAperture(positions, r=aper_radius)
+
+	# Do background subtraction with an annulus if desired
+	if bkgd_subtract:
+		global annuli
+		annuli = CircularAnnulus(positions, r_in=20, r_out=30)
+		apers = [apertures, annuli]
 	else:
-		# Get sky coordinates of centroid of HST image
-		#hdu_hst = fits.open('%s_HST.fits' % gal_name[:5])
-		#w_hst = wcs.WCS(hdu_hst[0])
-		#trans_hst = w_hst.all_pix2world(1199., 1199., 0)
-		#ra_hst, dec_hst = trans_hst[0], trans_hst[1]
+		apers = [apertures]
 
-		# Save centroid RA, Dec to file
-		with open('text/center_radio.txt', 'w') as f_center:
-		    f_center.write('%s\n' % 100)
-		    f_center.write('%s\n' % 100)
-
-		
-    apertures = CircularAperture(positions, r=aper_radius)
-
-    # Do background subtraction with an annulus if desired
-    if bkgd_subtract:
-        global annuli
-        annuli = CircularAnnulus(positions, r_in=20, r_out=30)
-        apers = [apertures, annuli]
-    else:
-        apers = [apertures]
-
-    # Do the photometry, background subtraction if desired
-    photo_table = aperture_photometry(data, apers, error=error_image)
+	# Do the photometry, background subtraction if desired
+	photo_table = aperture_photometry(data, apers, error=error_image)
 
 
 
-    # return all relevant values
-    output = []
-    if bkgd_subtract:
-        bkg_mean = photo_table['aperture_sum_1'] / annuli.area()
-        bkg_sum = bkg_mean * apertures.area()
-        final_sum = photo_table['aperture_sum_0'] - bkg_sum
-        photo_table['residual_aperture_sum'] = final_sum
-        flux = (photo_table['residual_aperture_sum']/pix_per_beam)[0]
-    else:
-        flux = (photo_table['aperture_sum']/pix_per_beam)[0]
+	# return all relevant values
+	output = []
+	if bkgd_subtract:
+		bkg_mean = photo_table['aperture_sum_1'] / annuli.area()
+		bkg_sum = bkg_mean * apertures.area()
+		final_sum = photo_table['aperture_sum_0'] - bkg_sum
+		photo_table['residual_aperture_sum'] = final_sum
+		flux = (photo_table['residual_aperture_sum']/pix_per_beam)[0]
+	else:
+		flux = (photo_table['aperture_sum']/pix_per_beam)[0]
 
 
-    output.append(flux)
-    output.append(flux_error)
-    output.append(std_dev)
-    output.append(pix_per_beam)
-    output.append(beams_per_aper)
-    output.append(max_val_in_aperture)
-    output.append(max_val_in_aperture/std_dev)
-    output.append(flux/flux_error)
+	output.append(flux)
+	output.append(flux_error)
+	output.append(std_dev)
+	output.append(pix_per_beam)
+	output.append(beams_per_aper)
+	output.append(max_val_in_aperture)
+	output.append(max_val_in_aperture/std_dev)
+	output.append(flux/flux_error)
 
-    os.chdir('..')
-    return output
+	os.chdir('..')
+	return output
 

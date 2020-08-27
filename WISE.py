@@ -1,47 +1,42 @@
 #
 # Author: Grayson Petter
 
-
-import os
 import numpy as np
-from astropy.io import fits
-from astropy.table import Table, Column
-import pandas as pd
-import CalcSFRs
-CalcSFRs = reload(CalcSFRs)
+from astropy.table import Table
+from os import getcwd
 
-fc_w_three = [0.9169, 0.9393, 1.0088, 1.1344, 0.9373, 1., 1.1081, 1.2687]
-fc_w_four = [0.9905, 0.9934, 1.0013, 1.0142, 0.9926, 1., 1.013, 1.0319]
-w_three = 29.045
-w_four = 8.284
-
-
-
-
+# convert from WISE magnitudes to fluxes in Jy
 def mag_to_flux(name):
-	
-	pat = 'unWISE/%s.fits' % (name)
+
+
+	WISEdir = '/Users/graysonpetter/Desktop/Dartmouth/HIZEA/hizea-VLA-SFRs/unWISE/%s.fits' % name
+	t = Table.read(WISEdir)
+
+	# constants given at http://wise2.ipac.caltech.edu/docs/release/allsky/expsup/sec4_4h.html#example
+	w_three_const = 31.674
+	w_four_const = 8.363
+	# calculate W3, W4 fluxes in Jy
+	flux_three = w_three_const * (10 ** (-(float(t['w3_mag']) / 2.5)))
+	flux_four = w_four_const * (10 ** (-(float(t['w4_mag']) / 2.5)))
+	# errors computed by error propagation formula
+	flux_three_err = w_three_const*np.log(10)/2.5*(10**(-(float(t['w3_mag']) / 2.5)))*float(t['w3_mag_err'])
+	flux_four_err = w_four_const*np.log(10)/2.5*(10**(-(float(t['w4_mag']) / 2.5)))*float(t['w4_mag_err'])
+
+	return flux_three, flux_four, flux_three_err, flux_four_err
+
+
+# calculate WISE colors and errors
+def colors(name):
+	pat = '/Users/graysonpetter/Desktop/Dartmouth/HIZEA/hizea-VLA-SFRs/unWISE/%s.fits' % name
 	t = Table.read(pat)
+	# W1-W2
+	one_two = float(t['w1_mag'])-float(t['w2_mag'])
+	one_two_err = np.sqrt((float(t['w1_mag_err']))**2+(float(t['w2_mag_err']))**2)
+	# W3-W4
+	three_four = float(t['w3_mag'])-float(t['w4_mag'])
+	three_four_err = np.sqrt((float(t['w3_mag_err'])) ** 2 + (float(t['w4_mag_err'])) ** 2)
+	# W2-W3
+	two_three = float(t['w2_mag'])-float(t['w3_mag'])
+	two_three_err = np.sqrt((float(t['w2_mag_err'])) ** 2 + (float(t['w3_mag_err'])) ** 2)
+	return one_two, three_four, two_three, one_two_err, three_four_err, two_three_err
 
-	print('1-2')
-	print(float(t['w1_mag'])-float(t['w2_mag']))
-	print('2-3')
-	print(float(t['w2_mag'])-float(t['w3_mag']))
-	print('3-4')
-	print(float(t['w1_mag'])-float(t['w2_mag']))
-	
-	print('choose alpha')
-	alpha = input()
-	
-	color_corr = [fc_w_three[alpha], fc_w_four[alpha]]
-
-	flux_three = (w_three/color_corr[0])*(10**(-(float(t['w3_mag'])/2.5)))
-	flux_four = (w_four/color_corr[1])*(10**(-(float(t['w4_mag'])/2.5)))
-	
-
-	return(flux_three, flux_four)
-
-test = mag_to_flux('J1107')
-print(test)
-print(((CalcSFRs.calc_params(test[0], 0, 0.467, 0))[0])/(10**7))
-print(((CalcSFRs.calc_params(test[1], 0, 0.467, 0))[0])/(10**7))
